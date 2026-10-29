@@ -1,0 +1,20 @@
+[
+  {
+    "id": "wh_1",
+    "url": "http://127.0.0.1:8000/webhooks/whatsapp",
+    "events": [
+      "all"
+    ],
+    "enabled": true,
+    "createdAt": "2026-10-29T14:14:17.019Z"
+  },
+  {
+    "id": "wh_2",
+    "url": "http://localhost:8000/webhooks/whatsapp",
+    "events": [
+      "all"
+    ],
+    "enabled": true,
+    "createdAt": "2026-10-29T14:14:17.019Z"
+  }
+]

@@ -1,0 +1,34 @@
+[
+  {
+    "id": "rule_welcome",
+    "name": "Welcome & Info Trigger",
+    "enabled": true,
+    "triggerType": "contains",
+    "keywords": [
+      "hello",
+      "hi",
+      "hey",
+      "start",
+      "info"
+    ],
+    "responseType": "text",
+    "responseText": "👋 Hello! Thank you for contacting us.\n\n🤖 This is an automated response from *BotsApp Gateway*.\n\nReply with *HELP* for options or visit our portal for more details.",
+    "cooldownSeconds": 300,
+    "createdAt": "2026-10-29T14:14:17.020Z"
+  },
+  {
+    "id": "rule_help",
+    "name": "Help Menu",
+    "enabled": true,
+    "triggerType": "exact",
+    "keywords": [
+      "help",
+      "menu",
+      "options"
+    ],
+    "responseType": "text",
+    "responseText": "📋 *BotsApp Menu Options:*\n\n1️⃣ Account Support\n2️⃣ Course Details & Onboarding\n3️⃣ Talk to an Agent\n\nPlease let us know how we can assist you!",
+    "cooldownSeconds": 60,
+    "createdAt": "2026-10-29T14:14:17.020Z"
+  }
+]
