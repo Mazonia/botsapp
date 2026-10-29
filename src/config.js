@@ -47,3 +47,4 @@ module.exports = {
     AUTH_DIR: authDir,
     SESSION_START_FILE: path.join(dataDir, '.session_start')
 };
+

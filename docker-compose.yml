@@ -25,3 +25,4 @@ volumes:
   botsapp_auth:
   botsapp_data:
   botsapp_logs:
+

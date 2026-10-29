@@ -682,3 +682,4 @@ class WhatsAppGateway {
 }
 
 module.exports = new WhatsAppGateway();
+

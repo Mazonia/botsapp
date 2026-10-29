@@ -17,3 +17,4 @@ if %errorlevel% neq 0 (
 echo Starting BotsApp Server...
 node src/index.js
 pause
+

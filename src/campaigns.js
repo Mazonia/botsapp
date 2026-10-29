@@ -214,3 +214,4 @@ class CampaignManager {
 }
 
 module.exports = new CampaignManager();
+

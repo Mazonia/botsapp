@@ -33,3 +33,5 @@ temp/*
 Thumbs.db
 .idea/
 .vscode/
+.playwright-mcp/
+

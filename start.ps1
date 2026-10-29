@@ -15,3 +15,4 @@ if (-not $node) {
 
 Write-Host "Starting BotsApp Server..." -ForegroundColor Yellow
 node src/index.js
+

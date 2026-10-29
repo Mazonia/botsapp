@@ -19,3 +19,4 @@ child.unref();
 
 console.log('BotsApp detached server spawned successfully with PID:', child.pid);
 process.exit(0);
+

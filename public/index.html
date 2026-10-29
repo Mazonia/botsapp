@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BotsApp — Enterprise WhatsApp Gateway</title>
+    <title>BotsApp - Enterprise WhatsApp Gateway</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -31,40 +31,48 @@
     <script src="/socket.io/socket.io.js"></script>
     <link rel="stylesheet" href="/css/custom.css">
 </head>
-<body class="min-h-screen bg-[#090d16] text-slate-100 flex flex-col antialiased selection:bg-emerald-500/30 selection:text-emerald-300">
+<body class="min-h-screen flex flex-col antialiased selection:bg-emerald-500/30 selection:text-emerald-400">
 
     <!-- Top Navigation Header -->
-    <header class="sticky top-0 z-50 bg-[#0c1220]/90 backdrop-blur-xl border-b border-white/10 px-4 lg:px-8 py-3.5 flex items-center justify-between">
+    <header class="sticky top-0 z-50 bg-white/80 dark:bg-[#0c1220]/90 backdrop-blur-xl border-b border-slate-200 dark:border-white/10 px-4 lg:px-8 py-3.5 flex items-center justify-between transition-colors">
         <div class="flex items-center gap-3.5">
             <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-400 p-0.5 shadow-lg shadow-emerald-500/20 flex items-center justify-center">
-                <div class="w-full h-full bg-[#090d16] rounded-[14px] flex items-center justify-center text-emerald-400">
+                <div class="w-full h-full bg-white dark:bg-[#090d16] rounded-[14px] flex items-center justify-center text-emerald-600 dark:text-emerald-400">
                     <i data-lucide="message-square" class="w-5 h-5"></i>
                 </div>
             </div>
             <div>
                 <div class="flex items-center gap-2">
-                    <span class="text-base font-extrabold tracking-tight text-white">BotsApp</span>
-                    <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Gateway v2.0</span>
+                    <span class="text-base font-extrabold tracking-tight text-slate-900 dark:text-white">BotsApp</span>
+                    <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30">Gateway v2.0</span>
                 </div>
-                <p class="text-xs text-slate-400">Enterprise Standalone WhatsApp Engine</p>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Enterprise Standalone WhatsApp Engine</p>
             </div>
         </div>
 
         <!-- Header Status & Action Controls -->
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2.5">
             <!-- Dynamic State Badge -->
-            <div id="topStatusBadge" class="flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20 transition-all duration-300">
-                <span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+            <div id="topStatusBadge" data-tooltip="Live WhatsApp connection state with linked device" class="flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 transition-all duration-300">
+                <span class="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span>
                 <span id="topStatusText">Connecting...</span>
             </div>
 
-            <button onclick="openPairingModal()" class="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-800/80 hover:bg-slate-700 text-slate-200 border border-white/10 transition">
-                <i data-lucide="key" class="w-3.5 h-3.5 text-emerald-400"></i>
+            <!-- Light / Dark Theme Switcher Button -->
+            <button onclick="toggleTheme()" id="themeToggleBtn" data-tooltip="Toggle Light / Dark mode" class="p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 border border-slate-200 dark:border-white/10 transition">
+                <i id="themeIcon" data-lucide="sun" class="w-4 h-4 hidden dark:block text-amber-400"></i>
+                <i data-lucide="moon" class="w-4 h-4 block dark:hidden text-slate-700"></i>
+            </button>
+
+            <!-- Pairing Code Button -->
+            <button onclick="openPairingModal()" data-tooltip="Link phone using 8-character code without camera" class="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-white/10 transition">
+                <i data-lucide="key" class="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400"></i>
                 Pairing Code
             </button>
 
-            <button onclick="triggerResetSession()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/20 transition">
-                <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-rose-400"></i>
+            <!-- Reset Session Button -->
+            <button onclick="triggerResetSession()" data-tooltip="Disconnect device and generate a fresh QR code" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-300 border border-rose-500/20 transition">
+                <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-rose-500 dark:text-rose-400"></i>
                 <span class="hidden sm:inline">Reset Session</span>
             </button>
         </div>
@@ -74,61 +82,61 @@
     <div class="flex-1 flex flex-col md:flex-row overflow-hidden">
         
         <!-- Sidebar Navigation -->
-        <aside class="w-full md:w-64 bg-[#0c1220]/60 border-r border-white/5 p-3 md:p-4 flex md:flex-col gap-1.5 shrink-0 overflow-x-auto md:overflow-x-visible">
-            <div class="text-[11px] font-bold uppercase tracking-wider text-slate-500 px-3 py-1 hidden md:block">Navigation</div>
+        <aside class="w-full md:w-64 bg-slate-50/90 dark:bg-[#0c1220]/60 border-r border-slate-200 dark:border-white/5 p-3 md:p-4 flex md:flex-col gap-1.5 shrink-0 overflow-x-auto md:overflow-x-visible transition-colors">
+            <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 px-3 py-1 hidden md:block">Navigation</div>
             
-            <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-white/5 transition active-nav">
-                <i data-lucide="layout-dashboard" class="w-4 h-4 text-emerald-400"></i>
+            <button onclick="switchTab('dashboard')" id="nav-dashboard" data-tooltip="Connection overview and real-time event log" data-tooltip-pos="bottom" class="nav-btn flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/5 transition active-nav">
+                <i data-lucide="layout-dashboard" class="w-4 h-4 text-emerald-600 dark:text-emerald-400"></i>
                 <span>Dashboard</span>
             </button>
 
-            <button onclick="switchTab('chat')" id="nav-chat" class="nav-btn flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-white/5 transition">
-                <i data-lucide="messages-square" class="w-4 h-4 text-teal-400"></i>
+            <button onclick="switchTab('chat')" id="nav-chat" data-tooltip="Live WhatsApp Web chat interface" data-tooltip-pos="bottom" class="nav-btn flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/5 transition">
+                <i data-lucide="messages-square" class="w-4 h-4 text-teal-600 dark:text-teal-400"></i>
                 <span>Live Inbox</span>
             </button>
 
-            <button onclick="switchTab('composer')" id="nav-composer" class="nav-btn flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-white/5 transition">
-                <i data-lucide="send" class="w-4 h-4 text-sky-400"></i>
+            <button onclick="switchTab('composer')" id="nav-composer" data-tooltip="Multi-format message studio with phone mockup" data-tooltip-pos="bottom" class="nav-btn flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/5 transition">
+                <i data-lucide="send" class="w-4 h-4 text-sky-600 dark:text-sky-400"></i>
                 <span>Send & Media</span>
             </button>
 
-            <button onclick="switchTab('campaigns')" id="nav-campaigns" class="nav-btn flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-white/5 transition">
-                <i data-lucide="megaphone" class="w-4 h-4 text-indigo-400"></i>
+            <button onclick="switchTab('campaigns')" id="nav-campaigns" data-tooltip="Bulk campaign broadcaster with CSV uploads" data-tooltip-pos="bottom" class="nav-btn flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/5 transition">
+                <i data-lucide="megaphone" class="w-4 h-4 text-indigo-600 dark:text-indigo-400"></i>
                 <span>Broadcaster</span>
             </button>
 
-            <button onclick="switchTab('contacts')" id="nav-contacts" class="nav-btn flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-white/5 transition">
-                <i data-lucide="user-check" class="w-4 h-4 text-purple-400"></i>
+            <button onclick="switchTab('contacts')" id="nav-contacts" data-tooltip="Validate phone numbers and filter unregistered SIMs" data-tooltip-pos="bottom" class="nav-btn flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/5 transition">
+                <i data-lucide="user-check" class="w-4 h-4 text-purple-600 dark:text-purple-400"></i>
                 <span>Number Check</span>
             </button>
 
-            <button onclick="switchTab('autoresponder')" id="nav-autoresponder" class="nav-btn flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-white/5 transition">
-                <i data-lucide="bot" class="w-4 h-4 text-amber-400"></i>
+            <button onclick="switchTab('autoresponder')" id="nav-autoresponder" data-tooltip="Define automatic keyword triggers and chatbot rules" data-tooltip-pos="bottom" class="nav-btn flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/5 transition">
+                <i data-lucide="bot" class="w-4 h-4 text-amber-600 dark:text-amber-400"></i>
                 <span>Auto-Responder</span>
             </button>
 
-            <button onclick="switchTab('webhooks')" id="nav-webhooks" class="nav-btn flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-white/5 transition">
-                <i data-lucide="webhook" class="w-4 h-4 text-rose-400"></i>
+            <button onclick="switchTab('webhooks')" id="nav-webhooks" data-tooltip="Configure external webhook HTTP destinations" data-tooltip-pos="bottom" class="nav-btn flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/5 transition">
+                <i data-lucide="webhook" class="w-4 h-4 text-rose-600 dark:text-rose-400"></i>
                 <span>Webhooks</span>
             </button>
 
-            <button onclick="switchTab('docs')" id="nav-docs" class="nav-btn flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-white/5 transition">
-                <i data-lucide="code" class="w-4 h-4 text-emerald-400"></i>
+            <button onclick="switchTab('docs')" id="nav-docs" data-tooltip="Developer API specs, cURL, PHP, and Python examples" data-tooltip-pos="bottom" class="nav-btn flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/5 transition">
+                <i data-lucide="code" class="w-4 h-4 text-emerald-600 dark:text-emerald-400"></i>
                 <span>API Docs & SDK</span>
             </button>
 
             <!-- Bottom Session Info Widget -->
-            <div class="mt-auto hidden md:block pt-4 border-t border-white/5">
-                <div class="p-3 rounded-2xl bg-white/[0.03] border border-white/5 text-[11px] space-y-1.5">
-                    <div class="flex items-center justify-between text-slate-400">
+            <div class="mt-auto hidden md:block pt-4 border-t border-slate-200 dark:border-white/5">
+                <div class="p-3 rounded-2xl bg-slate-100 dark:bg-white/[0.03] border border-slate-200 dark:border-white/5 text-[11px] space-y-1.5">
+                    <div class="flex items-center justify-between text-slate-500 dark:text-slate-400">
                         <span>Send Queue:</span>
-                        <span id="sidebarQueueCount" class="font-bold text-white">0 pending</span>
+                        <span id="sidebarQueueCount" class="font-bold text-slate-800 dark:text-white">0 pending</span>
                     </div>
-                    <div class="flex items-center justify-between text-slate-400">
+                    <div class="flex items-center justify-between text-slate-500 dark:text-slate-400">
                         <span>Daily Sent:</span>
-                        <span id="sidebarDailyCount" class="font-bold text-emerald-400">0 / 120</span>
+                        <span id="sidebarDailyCount" class="font-bold text-emerald-600 dark:text-emerald-400">0 / 120</span>
                     </div>
-                    <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                    <div class="w-full bg-slate-200 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden">
                         <div id="sidebarProgressBar" class="bg-emerald-500 h-full rounded-full transition-all duration-300" style="width: 0%"></div>
                     </div>
                 </div>
@@ -146,51 +154,51 @@
                 <!-- Quick KPI Grid -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     <!-- Card 1: Connection -->
-                    <div class="glass-panel p-5 rounded-3xl border border-white/10 relative overflow-hidden">
+                    <div class="glass-panel p-5 rounded-3xl relative overflow-hidden" data-tooltip="Live WhatsApp Web bridge status">
                         <div class="flex items-center justify-between">
-                            <span class="text-xs font-medium text-slate-400">WhatsApp State</span>
-                            <div class="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
+                            <span class="text-xs font-medium text-slate-500 dark:text-slate-400">WhatsApp State</span>
+                            <div class="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
                                 <i data-lucide="activity" class="w-4 h-4"></i>
                             </div>
                         </div>
-                        <p id="kpiState" class="text-lg font-bold text-white mt-2">Checking...</p>
-                        <p id="kpiUser" class="text-xs text-slate-400 mt-1 truncate">Waiting for scan</p>
+                        <p id="kpiState" class="text-lg font-bold text-slate-900 dark:text-white mt-2">Checking...</p>
+                        <p id="kpiUser" class="text-xs text-slate-500 dark:text-slate-400 mt-1 truncate">Waiting for scan</p>
                     </div>
 
                     <!-- Card 2: Anti-ban & Warmup -->
-                    <div class="glass-panel p-5 rounded-3xl border border-white/10 relative overflow-hidden">
+                    <div class="glass-panel p-5 rounded-3xl relative overflow-hidden" data-tooltip="Session warmup profile applied to rate-limit sends safely">
                         <div class="flex items-center justify-between">
-                            <span class="text-xs font-medium text-slate-400">Anti-Ban Protection</span>
-                            <div class="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center">
+                            <span class="text-xs font-medium text-slate-500 dark:text-slate-400">Anti-Ban Protection</span>
+                            <div class="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center">
                                 <i data-lucide="shield-check" class="w-4 h-4"></i>
                             </div>
                         </div>
-                        <p id="kpiProfile" class="text-lg font-bold text-amber-400 mt-2">Active Delay</p>
-                        <p id="kpiAge" class="text-xs text-slate-400 mt-1">Session Age: 0h</p>
+                        <p id="kpiProfile" class="text-lg font-bold text-amber-600 dark:text-amber-400 mt-2">Active Delay</p>
+                        <p id="kpiAge" class="text-xs text-slate-500 dark:text-slate-400 mt-1">Session Age: 0h</p>
                     </div>
 
                     <!-- Card 3: Daily Sends -->
-                    <div class="glass-panel p-5 rounded-3xl border border-white/10 relative overflow-hidden">
+                    <div class="glass-panel p-5 rounded-3xl relative overflow-hidden" data-tooltip="Messages sent today out of your daily account safety limit">
                         <div class="flex items-center justify-between">
-                            <span class="text-xs font-medium text-slate-400">Today's Messages</span>
-                            <div class="w-8 h-8 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center">
+                            <span class="text-xs font-medium text-slate-500 dark:text-slate-400">Today's Messages</span>
+                            <div class="w-8 h-8 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
                                 <i data-lucide="send" class="w-4 h-4"></i>
                             </div>
                         </div>
-                        <p id="kpiDaily" class="text-lg font-bold text-white mt-2">0 / 120</p>
-                        <p class="text-xs text-slate-400 mt-1">Resets at midnight</p>
+                        <p id="kpiDaily" class="text-lg font-bold text-slate-900 dark:text-white mt-2">0 / 120</p>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Resets at midnight</p>
                     </div>
 
                     <!-- Card 4: Send Queue -->
-                    <div class="glass-panel p-5 rounded-3xl border border-white/10 relative overflow-hidden">
+                    <div class="glass-panel p-5 rounded-3xl relative overflow-hidden" data-tooltip="Queued outgoing messages awaiting pacing delivery">
                         <div class="flex items-center justify-between">
-                            <span class="text-xs font-medium text-slate-400">Active Queue</span>
-                            <div class="w-8 h-8 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center">
+                            <span class="text-xs font-medium text-slate-500 dark:text-slate-400">Active Queue</span>
+                            <div class="w-8 h-8 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center">
                                 <i data-lucide="layers" class="w-4 h-4"></i>
                             </div>
                         </div>
-                        <p id="kpiQueue" class="text-lg font-bold text-white mt-2">0 in queue</p>
-                        <p id="kpiQueueState" class="text-xs text-emerald-400 mt-1">Ready for requests</p>
+                        <p id="kpiQueue" class="text-lg font-bold text-slate-900 dark:text-white mt-2">0 in queue</p>
+                        <p id="kpiQueueState" class="text-xs text-emerald-600 dark:text-emerald-400 mt-1">Ready for requests</p>
                     </div>
                 </div>
 
@@ -198,22 +206,22 @@
                 <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
                     
                     <!-- Scanner Panel (7 Cols) -->
-                    <div class="lg:col-span-7 glass-panel p-6 md:p-8 rounded-3xl border border-white/10 flex flex-col items-center justify-center text-center relative overflow-hidden">
+                    <div class="lg:col-span-7 glass-panel p-6 md:p-8 rounded-3xl flex flex-col items-center justify-center text-center relative overflow-hidden">
                         <div class="max-w-md w-full space-y-4">
                             <div>
-                                <h3 class="text-base font-bold text-white tracking-wide">WhatsApp Device Gateway</h3>
-                                <p class="text-xs text-slate-400 mt-1">Open WhatsApp on your mobile phone &rarr; <b>Linked Devices</b> &rarr; <b>Link a Device</b> &rarr; Point your camera at this QR code</p>
+                                <h3 class="text-base font-bold text-slate-900 dark:text-white tracking-wide">WhatsApp Device Gateway</h3>
+                                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Open WhatsApp on your mobile phone &rarr; <b>Linked Devices</b> &rarr; <b>Link a Device</b> &rarr; Point your camera at this QR code</p>
                             </div>
 
                             <!-- QR / Connected State Box -->
-                            <div class="p-6 bg-slate-900/90 rounded-3xl border border-white/10 inline-block shadow-2xl relative min-w-[280px]">
+                            <div class="p-6 bg-slate-100 dark:bg-slate-900/90 rounded-3xl border border-slate-200 dark:border-white/10 inline-block shadow-2xl relative min-w-[280px]">
                                 <!-- Connected Banner -->
                                 <div id="dashConnectedBox" class="hidden py-8 px-4 space-y-3">
-                                    <div class="w-16 h-16 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto text-3xl font-bold shadow-lg shadow-emerald-500/20">
+                                    <div class="w-16 h-16 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto text-3xl font-bold shadow-lg shadow-emerald-500/20">
                                         <i data-lucide="check" class="w-8 h-8"></i>
                                     </div>
-                                    <h4 class="text-base font-bold text-emerald-400">Gateway Active &amp; Ready</h4>
-                                    <p id="connectedDeviceDetail" class="text-xs text-slate-300">WhatsApp Web authenticated</p>
+                                    <h4 class="text-base font-bold text-emerald-600 dark:text-emerald-400">Gateway Active &amp; Ready</h4>
+                                    <p id="connectedDeviceDetail" class="text-xs text-slate-600 dark:text-slate-300">WhatsApp Web authenticated</p>
                                     <div class="pt-2">
                                         <button onclick="switchTab('composer')" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition shadow-lg shadow-emerald-600/20">
                                             Send Test Message
@@ -233,11 +241,11 @@
                             </div>
 
                             <div class="flex items-center justify-center gap-2 pt-2">
-                                <button onclick="fetchStatus()" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold border border-white/10 transition flex items-center gap-1.5">
+                                <button onclick="fetchStatus()" data-tooltip="Check current connection status" class="px-3.5 py-2 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold border border-slate-300 dark:border-white/10 transition flex items-center gap-1.5">
                                     <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i>
                                     Refresh
                                 </button>
-                                <button onclick="openPairingModal()" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold border border-white/10 transition flex items-center gap-1.5">
+                                <button onclick="openPairingModal()" data-tooltip="Request an 8-character phone pairing code" class="px-3.5 py-2 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold border border-slate-300 dark:border-white/10 transition flex items-center gap-1.5">
                                     <i data-lucide="smartphone" class="w-3.5 h-3.5"></i>
                                     Link with Phone Number
                                 </button>
@@ -246,28 +254,28 @@
                     </div>
 
                     <!-- Quick Diagnostic & Send Test (5 Cols) -->
-                    <div class="lg:col-span-5 glass-panel p-6 rounded-3xl border border-white/10 flex flex-col justify-between space-y-5">
+                    <div class="lg:col-span-5 glass-panel p-6 rounded-3xl flex flex-col justify-between space-y-5">
                         <div>
-                            <h3 class="text-sm font-bold text-white flex items-center gap-2">
-                                <i data-lucide="zap" class="w-4 h-4 text-emerald-400"></i>
+                            <h3 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                                <i data-lucide="zap" class="w-4 h-4 text-emerald-600 dark:text-emerald-400"></i>
                                 Quick Diagnostic Message
                             </h3>
-                            <p class="text-xs text-slate-400 mt-1">Test the anti-ban queue by sending a fast message directly to any WhatsApp number.</p>
+                            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Test the anti-ban queue by sending a fast message directly to any WhatsApp number.</p>
 
                             <form id="quickTestForm" onsubmit="handleQuickSend(event)" class="space-y-3 mt-4">
                                 <div>
-                                    <label class="text-[11px] font-semibold text-slate-300">Recipient Phone (with country code)</label>
-                                    <input type="text" id="quickPhone" required placeholder="e.g. 23324XXXXXXX or 024XXXXXXX" class="w-full mt-1 px-3.5 py-2.5 text-xs bg-slate-900 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500">
+                                    <label class="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Recipient Phone (with country code)</label>
+                                    <input type="text" id="quickPhone" required placeholder="e.g. 23324XXXXXXX or 024XXXXXXX" class="w-full mt-1 px-3.5 py-2.5 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/10 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-emerald-500">
                                 </div>
 
                                 <div>
-                                    <label class="text-[11px] font-semibold text-slate-300">Message Content</label>
-                                    <textarea id="quickMessage" rows="3" class="w-full mt-1 px-3.5 py-2 text-xs bg-slate-900 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500">Hello from BotsApp Gateway v2.0! System is online and healthy. 🚀</textarea>
+                                    <label class="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Message Content</label>
+                                    <textarea id="quickMessage" rows="3" class="w-full mt-1 px-3.5 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/10 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-emerald-500">Hello from BotsApp Gateway v2.0! System is online and healthy. 🚀</textarea>
                                 </div>
 
                                 <div class="flex items-center justify-between pt-1">
-                                    <span class="text-[11px] text-slate-400">Priority: Normal</span>
-                                    <button type="submit" id="btnQuickSend" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-lg shadow-emerald-600/20">
+                                    <span class="text-[11px] text-slate-500 dark:text-slate-400">Priority: High</span>
+                                    <button type="submit" id="btnQuickSend" data-tooltip="Enqueues message with high priority" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-lg shadow-emerald-600/20">
                                         <i data-lucide="send" class="w-3.5 h-3.5"></i>
                                         Send Test
                                     </button>
@@ -277,15 +285,15 @@
                         </div>
 
                         <!-- System Queue Controls -->
-                        <div class="p-4 rounded-2xl bg-white/[0.02] border border-white/5 space-y-2">
+                        <div class="p-4 rounded-2xl bg-slate-100 dark:bg-white/[0.02] border border-slate-200 dark:border-white/5 space-y-2">
                             <div class="flex items-center justify-between text-xs">
-                                <span class="font-semibold text-slate-300">Queue Management</span>
+                                <span class="font-semibold text-slate-700 dark:text-slate-300">Queue Management</span>
                                 <div class="flex items-center gap-2">
-                                    <button onclick="pauseQueue()" class="text-[11px] text-amber-400 hover:underline">Pause</button>
-                                    <span class="text-slate-600">•</span>
-                                    <button onclick="resumeQueue()" class="text-[11px] text-emerald-400 hover:underline">Resume</button>
-                                    <span class="text-slate-600">•</span>
-                                    <button onclick="clearQueue()" class="text-[11px] text-rose-400 hover:underline">Clear</button>
+                                    <button onclick="pauseQueue()" data-tooltip="Temporarily pause all outgoing messages" class="text-[11px] text-amber-600 dark:text-amber-400 hover:underline">Pause</button>
+                                    <span class="text-slate-400">•</span>
+                                    <button onclick="resumeQueue()" data-tooltip="Resume sending queued messages" class="text-[11px] text-emerald-600 dark:text-emerald-400 hover:underline">Resume</button>
+                                    <span class="text-slate-400">•</span>
+                                    <button onclick="clearQueue()" data-tooltip="Drop all pending jobs in the queue" class="text-[11px] text-rose-600 dark:text-rose-400 hover:underline">Clear</button>
                                 </div>
                             </div>
                         </div>
@@ -293,15 +301,15 @@
                 </div>
 
                 <!-- Live Stream Console Log -->
-                <div class="glass-panel p-5 rounded-3xl border border-white/10 space-y-3">
+                <div class="glass-panel p-5 rounded-3xl space-y-3">
                     <div class="flex items-center justify-between">
                         <div class="flex items-center gap-2">
-                            <i data-lucide="terminal" class="w-4 h-4 text-emerald-400"></i>
-                            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300">Real-Time Event Stream</h3>
+                            <i data-lucide="terminal" class="w-4 h-4 text-emerald-600 dark:text-emerald-400"></i>
+                            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">Real-Time Event Stream</h3>
                         </div>
-                        <button onclick="clearLogDisplay()" class="text-[11px] text-slate-400 hover:text-white transition">Clear Stream</button>
+                        <button onclick="clearLogDisplay()" data-tooltip="Clear log output view" class="text-[11px] text-slate-500 hover:text-slate-800 dark:hover:text-white transition">Clear Stream</button>
                     </div>
-                    <div id="liveConsole" class="h-44 bg-slate-950/80 rounded-2xl p-3 font-mono text-[11px] overflow-y-auto space-y-1 text-slate-300 border border-white/5">
+                    <div id="liveConsole" class="h-44 bg-slate-900 dark:bg-slate-950/80 rounded-2xl p-3 font-mono text-[11px] overflow-y-auto space-y-1 text-slate-300 border border-slate-300 dark:border-white/5">
                         <div class="text-slate-500">[System] Initializing console listener...</div>
                     </div>
                 </div>
@@ -311,31 +319,31 @@
             <!-- TAB 2: LIVE CHAT / INBOX -->
             <!-- ========================================================= -->
             <section id="tab-chat" class="tab-content hidden h-[calc(100vh-140px)]">
-                <div class="glass-panel rounded-3xl border border-white/10 h-full flex overflow-hidden">
+                <div class="glass-panel rounded-3xl h-full flex overflow-hidden">
                     
                     <!-- Left: Chat List -->
-                    <div class="w-full md:w-80 border-r border-white/5 flex flex-col bg-slate-900/40">
-                        <div class="p-3.5 border-b border-white/5 flex items-center justify-between">
-                            <h3 class="text-sm font-bold text-white">Conversations</h3>
-                            <button onclick="refreshChats()" class="text-slate-400 hover:text-white transition"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i></button>
+                    <div class="w-full md:w-80 border-r border-slate-200 dark:border-white/5 flex flex-col bg-slate-50/50 dark:bg-slate-900/40">
+                        <div class="p-3.5 border-b border-slate-200 dark:border-white/5 flex items-center justify-between">
+                            <h3 class="text-sm font-bold text-slate-900 dark:text-white">Conversations</h3>
+                            <button onclick="refreshChats()" data-tooltip="Refresh chat list" class="text-slate-400 hover:text-slate-700 dark:hover:text-white transition"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i></button>
                         </div>
-                        <div class="p-2 border-b border-white/5">
-                            <input type="text" id="chatSearchInput" oninput="filterChatList(this.value)" placeholder="Search chats..." class="w-full px-3 py-1.5 text-xs bg-slate-950 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none">
+                        <div class="p-2 border-b border-slate-200 dark:border-white/5">
+                            <input type="text" id="chatSearchInput" oninput="filterChatList(this.value)" placeholder="Search chats..." class="w-full px-3 py-1.5 text-xs bg-white dark:bg-slate-950 border border-slate-200 dark:border-white/10 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none">
                         </div>
-                        <div id="chatListContainer" class="flex-1 overflow-y-auto divide-y divide-white/5">
-                            <div class="p-4 text-xs text-center text-slate-500">Loading chats...</div>
+                        <div id="chatListContainer" class="flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-white/5">
+                            <div class="p-4 text-xs text-center text-slate-400">Loading chats...</div>
                         </div>
                     </div>
 
                     <!-- Right: Active Chat View -->
-                    <div class="hidden md:flex flex-1 flex-col bg-slate-950/40">
-                        <div id="activeChatHeader" class="p-3.5 border-b border-white/5 flex items-center justify-between bg-slate-900/30">
+                    <div class="hidden md:flex flex-1 flex-col bg-white/40 dark:bg-slate-950/40">
+                        <div id="activeChatHeader" class="p-3.5 border-b border-slate-200 dark:border-white/5 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/30">
                             <div class="flex items-center gap-3">
-                                <div id="activeChatAvatar" class="w-9 h-9 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-sm">
+                                <div id="activeChatAvatar" class="w-9 h-9 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold text-sm">
                                     ?
                                 </div>
                                 <div>
-                                    <h4 id="activeChatTitle" class="text-xs font-bold text-white">Select a conversation</h4>
+                                    <h4 id="activeChatTitle" class="text-xs font-bold text-slate-900 dark:text-white">Select a conversation</h4>
                                     <p id="activeChatSubtitle" class="text-[10px] text-slate-400">Click any chat on the left to read and reply</p>
                                 </div>
                             </div>
@@ -343,14 +351,19 @@
 
                         <!-- Message Bubbles Thread -->
                         <div id="chatThread" class="flex-1 overflow-y-auto p-4 space-y-3 flex flex-col">
-                            <div class="m-auto text-xs text-slate-500 text-center">
+                            <div class="m-auto text-xs text-slate-400 text-center">
                                 Select a conversation from the left to start chatting live.
                             </div>
                         </div>
 
-                        <!-- Quick Reply Composer -->
-                        <form id="chatReplyForm" onsubmit="handleSendReply(event)" class="p-3 border-t border-white/5 bg-slate-900/30 flex items-center gap-2">
-                            <input type="text" id="chatReplyInput" placeholder="Type a message..." class="flex-1 px-4 py-2 text-xs bg-slate-900 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500">
+                        <!-- Quick Reply Composer (with file attachment support) -->
+                        <form id="chatReplyForm" onsubmit="handleSendReply(event)" class="p-3 border-t border-slate-200 dark:border-white/5 bg-slate-50/50 dark:bg-slate-900/30 flex items-center gap-2">
+                            <label for="chatAttachInput" data-tooltip="Attach image or document" class="p-2 text-slate-400 hover:text-emerald-500 cursor-pointer transition">
+                                <i data-lucide="paperclip" class="w-4 h-4"></i>
+                                <input type="file" id="chatAttachInput" class="hidden" onchange="handleChatFileAttach(this)">
+                            </label>
+                            <span id="chatAttachBadge" class="hidden text-[10px] bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-full font-bold"></span>
+                            <input type="text" id="chatReplyInput" placeholder="Type a message..." class="flex-1 px-4 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-emerald-500">
                             <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-lg shadow-emerald-600/20">
                                 <i data-lucide="send" class="w-3.5 h-3.5"></i>
                                 Reply
@@ -361,76 +374,100 @@
             </section>
 
             <!-- ========================================================= -->
-            <!-- TAB 3: MESSAGE COMPOSER & MULTI-FORMAT -->
+            <!-- TAB 3: MESSAGE COMPOSER & MULTI-FORMAT STUDIO -->
             <!-- ========================================================= -->
             <section id="tab-composer" class="tab-content hidden space-y-6">
                 <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
                     
                     <!-- Composer Form Panel (7 Cols) -->
-                    <div class="lg:col-span-7 glass-panel p-6 rounded-3xl border border-white/10 space-y-5">
+                    <div class="lg:col-span-7 glass-panel p-6 rounded-3xl space-y-5">
                         <div>
-                            <h3 class="text-base font-bold text-white">Multi-Format Message Studio</h3>
-                            <p class="text-xs text-slate-400 mt-1">Send formatted text, high-res images, audio recordings, documents, polls, or contact cards.</p>
+                            <h3 class="text-base font-bold text-slate-900 dark:text-white">Multi-Format Message Studio</h3>
+                            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Send formatted text, high-res images, audio recordings, documents, polls, or contact cards.</p>
                         </div>
 
-                        <!-- Format Selector Tabs -->
-                        <div class="flex flex-wrap gap-1.5 p-1 bg-slate-900/80 rounded-2xl border border-white/5">
-                            <button onclick="setComposerFormat('text')" id="btn-format-text" class="format-btn px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-500 text-white">Text</button>
-                            <button onclick="setComposerFormat('image')" id="btn-format-image" class="format-btn px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white">Image / Video</button>
-                            <button onclick="setComposerFormat('document')" id="btn-format-document" class="format-btn px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white">Document / PDF</button>
-                            <button onclick="setComposerFormat('audio')" id="btn-format-audio" class="format-btn px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white">Voice Note</button>
-                            <button onclick="setComposerFormat('poll')" id="btn-format-poll" class="format-btn px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white">Interactive Poll</button>
-                            <button onclick="setComposerFormat('location')" id="btn-format-location" class="format-btn px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white">Location</button>
+                        <!-- Format Selector Tabs with tooltips -->
+                        <div class="flex flex-wrap gap-1.5 p-1 bg-slate-100 dark:bg-slate-900/80 rounded-2xl border border-slate-200 dark:border-white/5">
+                            <button onclick="setComposerFormat('text')" id="btn-format-text" data-tooltip="Standard text with markdown formatting" class="format-btn px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-600 text-white">Text</button>
+                            <button onclick="setComposerFormat('image')" id="btn-format-image" data-tooltip="Send JPEG/PNG images or MP4 videos" class="format-btn px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">Image / Video</button>
+                            <button onclick="setComposerFormat('document')" id="btn-format-document" data-tooltip="Send PDF or office document attachments" class="format-btn px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">Document / PDF</button>
+                            <button onclick="setComposerFormat('audio')" id="btn-format-audio" data-tooltip="Send WhatsApp voice notes (PTT)" class="format-btn px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">Voice Note</button>
+                            <button onclick="setComposerFormat('poll')" id="btn-format-poll" data-tooltip="Create interactive poll with options" class="format-btn px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">Interactive Poll</button>
+                            <button onclick="setComposerFormat('location')" id="btn-format-location" data-tooltip="Share GPS location pin" class="format-btn px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">Location</button>
                         </div>
 
                         <form id="composerForm" onsubmit="handleSendComposer(event)" class="space-y-4">
-                            <!-- Recipient Phone -->
-                            <div>
-                                <label class="text-[11px] font-semibold text-slate-300">Recipient Phone Number / Group ID</label>
-                                <input type="text" id="composerPhone" required placeholder="e.g. 23324XXXXXXX or group id" oninput="updatePreviewPhone(this.value)" class="w-full mt-1 px-3.5 py-2.5 text-xs bg-slate-900 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500">
+                            <!-- Recipient Phone & Priority -->
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                <div class="sm:col-span-2">
+                                    <label class="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Recipient Phone Number / Group ID</label>
+                                    <input type="text" id="composerPhone" required placeholder="e.g. 23324XXXXXXX or group id" oninput="updatePreviewPhone(this.value)" class="w-full mt-1 px-3.5 py-2.5 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/10 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-emerald-500">
+                                </div>
+                                <div>
+                                    <label class="text-[11px] font-semibold text-slate-700 dark:text-slate-300" data-tooltip="High priority skips front of anti-ban queue for OTPs">Queue Priority</label>
+                                    <select id="composerPriority" class="w-full mt-1 px-3 py-2.5 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/10 rounded-xl text-slate-900 dark:text-white focus:outline-none">
+                                        <option value="normal">Normal (Bulk)</option>
+                                        <option value="high">High (Alert / OTP)</option>
+                                    </select>
+                                </div>
                             </div>
 
                             <!-- DYNAMIC FIELD: TEXT -->
                             <div id="field-text" class="space-y-2">
                                 <div class="flex items-center justify-between">
-                                    <label class="text-[11px] font-semibold text-slate-300">Message Text (Markdown supported)</label>
+                                    <label class="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Message Text</label>
                                     <div class="flex gap-1 text-[10px]">
-                                        <button type="button" onclick="insertSyntax('*', '*')" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 font-bold">*Bold*</button>
-                                        <button type="button" onclick="insertSyntax('_', '_')" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 italic">_Italic_</button>
-                                        <button type="button" onclick="insertSyntax('~', '~')" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 line-through">~Strike~</button>
+                                        <button type="button" onclick="insertSyntax('*', '*')" data-tooltip="Bold: *text*" class="px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300 font-bold">*Bold*</button>
+                                        <button type="button" onclick="insertSyntax('_', '_')" data-tooltip="Italic: _text_" class="px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300 italic">_Italic_</button>
+                                        <button type="button" onclick="insertSyntax('~', '~')" data-tooltip="Strikethrough: ~text~" class="px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300 line-through">~Strike~</button>
+                                        <button type="button" onclick="insertSyntax('```', '```')" data-tooltip="Monospace: ```code```" class="px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300 font-mono">```Code```</button>
                                     </div>
                                 </div>
-                                <textarea id="composerText" rows="4" oninput="updatePreviewText(this.value)" placeholder="Write your WhatsApp message here..." class="w-full px-3.5 py-2.5 text-xs bg-slate-900 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"></textarea>
+                                <textarea id="composerText" rows="4" oninput="updatePreviewText(this.value)" placeholder="Write your WhatsApp message here..." class="w-full px-3.5 py-2.5 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/10 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-emerald-500"></textarea>
                             </div>
 
-                            <!-- DYNAMIC FIELD: MEDIA (IMAGE/VIDEO/DOC/AUDIO) -->
+                            <!-- DYNAMIC FIELD: MEDIA (IMAGE/VIDEO/DOC/AUDIO) WITH DROPZONE -->
                             <div id="field-media" class="hidden space-y-3">
                                 <div>
-                                    <label class="text-[11px] font-semibold text-slate-300">Upload File OR Provide Remote Web URL</label>
-                                    <input type="file" id="composerFile" class="w-full mt-1 text-xs text-slate-400 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-slate-200 hover:file:bg-slate-700">
+                                    <label class="text-[11px] font-semibold text-slate-700 dark:text-slate-300">File Attachment (Drag and Drop or Browse)</label>
+                                    <div id="mediaDropzone" class="dropzone p-4 text-center mt-1 bg-slate-50 dark:bg-slate-900/50" onclick="document.getElementById('composerFile').click()">
+                                        <i data-lucide="cloud-upload" class="w-8 h-8 text-emerald-600 dark:text-emerald-400 mx-auto mb-1"></i>
+                                        <p class="text-xs font-semibold text-slate-700 dark:text-slate-300">Click or drag file here to attach</p>
+                                        <p class="text-[10px] text-slate-500">Supports images, videos, audio, PDF, and documents (up to 50MB)</p>
+                                        <input type="file" id="composerFile" class="hidden" onchange="handleMediaFileSelected(this)">
+                                    </div>
+                                    <div id="mediaFilePreview" class="hidden mt-2 p-2.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-center justify-between text-xs">
+                                        <div class="flex items-center gap-2 truncate">
+                                            <i data-lucide="file" class="w-4 h-4 text-emerald-500 shrink-0"></i>
+                                            <span id="mediaFileName" class="font-bold text-slate-900 dark:text-white truncate"></span>
+                                            <span id="mediaFileSize" class="text-[10px] text-slate-500 shrink-0"></span>
+                                        </div>
+                                        <button type="button" onclick="clearMediaFile()" class="text-rose-500 hover:text-rose-700 text-xs font-bold">&times;</button>
+                                    </div>
                                 </div>
                                 <div>
-                                    <input type="url" id="composerMediaUrl" placeholder="Or paste public file URL (e.g. https://.../image.png)" class="w-full px-3.5 py-2 text-xs bg-slate-900 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none">
+                                    <label class="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Or Paste Public Web URL</label>
+                                    <input type="url" id="composerMediaUrl" placeholder="https://example.com/image.jpg" class="w-full mt-1 px-3.5 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/10 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none">
                                 </div>
                                 <div>
-                                    <label class="text-[11px] font-semibold text-slate-300">Caption (Optional)</label>
-                                    <input type="text" id="composerCaption" oninput="updatePreviewText(this.value)" placeholder="Attachment caption..." class="w-full mt-1 px-3.5 py-2 text-xs bg-slate-900 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none">
+                                    <label class="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Caption (Optional)</label>
+                                    <input type="text" id="composerCaption" oninput="updatePreviewText(this.value)" placeholder="Attachment caption..." class="w-full mt-1 px-3.5 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/10 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none">
                                 </div>
                             </div>
 
                             <!-- DYNAMIC FIELD: POLL -->
                             <div id="field-poll" class="hidden space-y-3">
                                 <div>
-                                    <label class="text-[11px] font-semibold text-slate-300">Poll Question</label>
-                                    <input type="text" id="composerPollQuestion" placeholder="e.g. Which course are you joining?" class="w-full mt-1 px-3.5 py-2 text-xs bg-slate-900 border border-white/10 rounded-xl text-white focus:outline-none">
+                                    <label class="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Poll Question</label>
+                                    <input type="text" id="composerPollQuestion" placeholder="e.g. Which course are you joining?" class="w-full mt-1 px-3.5 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/10 rounded-xl text-slate-900 dark:text-white focus:outline-none">
                                 </div>
                                 <div>
-                                    <label class="text-[11px] font-semibold text-slate-300">Options (one per line, minimum 2)</label>
-                                    <textarea id="composerPollOptions" rows="3" placeholder="Full Stack Web Dev&#10;Data Science&#10;Mobile App Dev" class="w-full mt-1 px-3.5 py-2 text-xs bg-slate-900 border border-white/10 rounded-xl text-white focus:outline-none"></textarea>
+                                    <label class="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Options (one per line, minimum 2)</label>
+                                    <textarea id="composerPollOptions" rows="3" placeholder="Full Stack Web Dev&#10;Data Science&#10;Mobile App Dev" class="w-full mt-1 px-3.5 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/10 rounded-xl text-slate-900 dark:text-white focus:outline-none"></textarea>
                                 </div>
                                 <div class="flex items-center gap-2">
-                                    <input type="checkbox" id="composerPollMulti" class="rounded bg-slate-800 border-white/10 text-emerald-500">
-                                    <label for="composerPollMulti" class="text-xs text-slate-300">Allow multiple answers</label>
+                                    <input type="checkbox" id="composerPollMulti" class="rounded bg-slate-200 dark:bg-slate-800 border-slate-300 dark:border-white/10 text-emerald-500">
+                                    <label for="composerPollMulti" class="text-xs text-slate-700 dark:text-slate-300">Allow multiple answers</label>
                                 </div>
                             </div>
 
@@ -438,21 +475,21 @@
                             <div id="field-location" class="hidden space-y-3">
                                 <div class="grid grid-cols-2 gap-3">
                                     <div>
-                                        <label class="text-[11px] font-semibold text-slate-300">Latitude</label>
-                                        <input type="text" id="composerLat" placeholder="5.6037" class="w-full mt-1 px-3 py-2 text-xs bg-slate-900 border border-white/10 rounded-xl text-white">
+                                        <label class="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Latitude</label>
+                                        <input type="text" id="composerLat" placeholder="5.6037" class="w-full mt-1 px-3 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/10 rounded-xl text-slate-900 dark:text-white">
                                     </div>
                                     <div>
-                                        <label class="text-[11px] font-semibold text-slate-300">Longitude</label>
-                                        <input type="text" id="composerLng" placeholder="-0.1870" class="w-full mt-1 px-3 py-2 text-xs bg-slate-900 border border-white/10 rounded-xl text-white">
+                                        <label class="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Longitude</label>
+                                        <input type="text" id="composerLng" placeholder="-0.1870" class="w-full mt-1 px-3 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/10 rounded-xl text-slate-900 dark:text-white">
                                     </div>
                                 </div>
                                 <div>
-                                    <label class="text-[11px] font-semibold text-slate-300">Address / Location Title</label>
-                                    <input type="text" id="composerLocDesc" placeholder="e.g. GeekByte Tech Hub, Accra" class="w-full mt-1 px-3 py-2 text-xs bg-slate-900 border border-white/10 rounded-xl text-white">
+                                    <label class="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Address / Location Title</label>
+                                    <input type="text" id="composerLocDesc" placeholder="e.g. GeekByte Tech Hub, Accra" class="w-full mt-1 px-3 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/10 rounded-xl text-slate-900 dark:text-white">
                                 </div>
                             </div>
 
-                            <button type="submit" id="btnComposerSend" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20">
+                            <button type="submit" id="btnComposerSend" data-tooltip="Submit to queue with anti-ban delay and typing simulation" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20">
                                 <i data-lucide="send" class="w-4 h-4"></i>
                                 Send Message (Anti-Ban Queued)
                             </button>
@@ -493,29 +530,29 @@
             </section>
 
             <!-- ========================================================= -->
-            <!-- TAB 4: BULK BROADCASTER -->
+            <!-- TAB 4: BULK BROADCASTER (WITH CSV UPLOAD) -->
             <!-- ========================================================= -->
             <section id="tab-campaigns" class="tab-content hidden space-y-6">
                 <div class="flex items-center justify-between">
                     <div>
-                        <h3 class="text-base font-bold text-white">Broadcast Campaign Engine</h3>
-                        <p class="text-xs text-slate-400 mt-0.5">Send personalized messages to thousands with smart human pacing and zero ban risk.</p>
+                        <h3 class="text-base font-bold text-slate-900 dark:text-white">Broadcast Campaign Engine</h3>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Send personalized messages to thousands with smart human pacing and zero ban risk.</p>
                     </div>
-                    <button onclick="openNewCampaignModal()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow-lg shadow-emerald-600/20">
+                    <button onclick="openNewCampaignModal()" data-tooltip="Create a new mass broadcast" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow-lg shadow-emerald-600/20">
                         <i data-lucide="plus" class="w-3.5 h-3.5"></i>
                         New Campaign
                     </button>
                 </div>
 
                 <!-- Campaigns List Table -->
-                <div class="glass-panel rounded-3xl border border-white/10 overflow-hidden">
-                    <div class="p-4 border-b border-white/5 flex items-center justify-between">
-                        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-300">All Broadcast Campaigns</h4>
-                        <button onclick="fetchCampaigns()" class="text-xs text-slate-400 hover:text-white"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i></button>
+                <div class="glass-panel rounded-3xl overflow-hidden">
+                    <div class="p-4 border-b border-slate-200 dark:border-white/5 flex items-center justify-between">
+                        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">All Broadcast Campaigns</h4>
+                        <button onclick="fetchCampaigns()" data-tooltip="Refresh campaigns list" class="text-xs text-slate-400 hover:text-slate-800 dark:hover:text-white"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i></button>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="w-full text-left text-xs">
-                            <thead class="bg-white/[0.02] text-slate-400 uppercase font-semibold text-[10px]">
+                            <thead class="bg-slate-50 dark:bg-white/[0.02] text-slate-500 uppercase font-semibold text-[10px]">
                                 <tr>
                                     <th class="p-4">Campaign</th>
                                     <th class="p-4">Status</th>
@@ -525,9 +562,9 @@
                                     <th class="p-4 text-right">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody id="campaignsTableBody" class="divide-y divide-white/5 text-slate-300">
+                            <tbody id="campaignsTableBody" class="divide-y divide-slate-200 dark:divide-white/5 text-slate-700 dark:text-slate-300">
                                 <tr>
-                                    <td colspan="6" class="p-6 text-center text-slate-500">No campaigns created yet. Click "New Campaign" to begin.</td>
+                                    <td colspan="6" class="p-6 text-center text-slate-400">No campaigns created yet. Click "New Campaign" to begin.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -536,54 +573,82 @@
             </section>
 
             <!-- ========================================================= -->
-            <!-- TAB 5: NUMBER CHECK & CONTACTS -->
+            <!-- TAB 5: NUMBER CHECK & BULK CSV VALIDATOR -->
             <!-- ========================================================= -->
             <section id="tab-contacts" class="tab-content hidden space-y-6">
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     
                     <!-- Single Check -->
-                    <div class="glass-panel p-6 rounded-3xl border border-white/10 space-y-4">
-                        <h3 class="text-sm font-bold text-white flex items-center gap-2">
-                            <i data-lucide="check-circle" class="w-4 h-4 text-emerald-400"></i>
-                            Instant Number Validator
+                    <div class="glass-panel p-6 rounded-3xl space-y-4">
+                        <h3 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                            <i data-lucide="check-circle" class="w-4 h-4 text-emerald-600 dark:text-emerald-400"></i>
+                            Instant Single Number Validator
                         </h3>
-                        <p class="text-xs text-slate-400">Check if a single telephone number is active and registered on WhatsApp.</p>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">Verify if an individual phone number is active and registered on WhatsApp.</p>
 
                         <div class="flex gap-2">
-                            <input type="text" id="singleCheckInput" placeholder="e.g. 024XXXXXXX or +233..." class="flex-1 px-3.5 py-2 text-xs bg-slate-900 border border-white/10 rounded-xl text-white focus:outline-none focus:border-emerald-500">
-                            <button onclick="runSingleCheck()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition">Check</button>
+                            <input type="text" id="singleCheckInput" placeholder="e.g. 024XXXXXXX or +233..." class="flex-1 px-3.5 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/10 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500">
+                            <button onclick="runSingleCheck()" data-tooltip="Query WhatsApp registration" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition">Check</button>
                         </div>
                         <div id="singleCheckResult" class="hidden p-3 rounded-xl text-xs"></div>
                     </div>
 
-                    <!-- Bulk Validator -->
-                    <div class="glass-panel p-6 rounded-3xl border border-white/10 space-y-4">
-                        <h3 class="text-sm font-bold text-white flex items-center gap-2">
-                            <i data-lucide="users" class="w-4 h-4 text-purple-400"></i>
-                            Bulk Number Checker (CSV / List)
+                    <!-- Bulk Validator with CSV Upload Dropzone -->
+                    <div class="glass-panel p-6 rounded-3xl space-y-4">
+                        <h3 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                            <i data-lucide="users" class="w-4 h-4 text-purple-600 dark:text-purple-400"></i>
+                            Bulk Number Checker (CSV File or List)
                         </h3>
-                        <p class="text-xs text-slate-400">Filter unregistered numbers out of your list before sending marketing blasts.</p>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">Upload a CSV file or paste numbers to verify thousands of contacts before broadcasting.</p>
 
-                        <textarea id="bulkCheckInput" rows="3" placeholder="Paste numbers separated by commas or line breaks..." class="w-full px-3.5 py-2 text-xs bg-slate-900 border border-white/10 rounded-xl text-white focus:outline-none"></textarea>
-                        <button onclick="runBulkCheck()" id="btnBulkCheck" class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold transition">Validate All</button>
+                        <!-- CSV Upload Dropzone for Validation -->
+                        <div id="validatorDropzone" class="dropzone p-3 text-center bg-slate-50 dark:bg-slate-900/40" onclick="document.getElementById('validatorCsvFile').click()">
+                            <i data-lucide="file-spreadsheet" class="w-6 h-6 text-purple-500 mx-auto mb-1"></i>
+                            <span class="text-xs font-semibold text-slate-700 dark:text-slate-300">Drop CSV file here to bulk validate</span>
+                            <span id="validatorCsvName" class="block text-[10px] text-purple-400 font-bold mt-0.5"></span>
+                            <input type="file" id="validatorCsvFile" accept=".csv,.txt,.tsv" class="hidden" onchange="handleValidatorCsv(this)">
+                        </div>
+
+                        <textarea id="bulkCheckInput" rows="2" placeholder="Or paste numbers separated by commas or line breaks..." class="w-full px-3.5 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/10 rounded-xl text-slate-900 dark:text-white focus:outline-none"></textarea>
+                        
+                        <div class="flex items-center gap-2">
+                            <button onclick="runBulkCheck()" id="btnBulkCheck" data-tooltip="Verify all numbers against WhatsApp" class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold transition">Validate All</button>
+                            <button onclick="exportValidationCsv()" id="btnExportCsv" data-tooltip="Download validated list as CSV file" class="hidden px-4 py-2 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5">
+                                <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                                Export CSV
+                            </button>
+                        </div>
                         <div id="bulkCheckResult" class="hidden p-3 rounded-xl text-xs"></div>
                     </div>
                 </div>
             </section>
 
             <!-- ========================================================= -->
-            <!-- TAB 6: AUTO-RESPONDER -->
+            <!-- TAB 6: AUTO-RESPONDER & TRIGGER SIMULATOR -->
             <!-- ========================================================= -->
             <section id="tab-autoresponder" class="tab-content hidden space-y-6">
                 <div class="flex items-center justify-between">
                     <div>
-                        <h3 class="text-base font-bold text-white">Keyword Auto-Responder &amp; Chatbot</h3>
-                        <p class="text-xs text-slate-400 mt-0.5">Define automated keyword reply rules with humanized delays.</p>
+                        <h3 class="text-base font-bold text-slate-900 dark:text-white">Keyword Auto-Responder &amp; Chatbot</h3>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Define automated keyword reply rules with humanized delays.</p>
                     </div>
-                    <button onclick="openNewRuleModal()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow-lg shadow-emerald-600/20">
+                    <button onclick="openNewRuleModal()" data-tooltip="Create a new automated response rule" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow-lg shadow-emerald-600/20">
                         <i data-lucide="plus" class="w-3.5 h-3.5"></i>
                         Add Rule
                     </button>
+                </div>
+
+                <!-- Live Trigger Simulator Card -->
+                <div class="glass-panel p-5 rounded-3xl space-y-3">
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                        <i data-lucide="play" class="w-3.5 h-3.5 text-amber-500"></i>
+                        Interactive Trigger Simulator (Test before publishing)
+                    </h4>
+                    <div class="flex gap-2">
+                        <input type="text" id="simTestInput" placeholder="Type a message to test (e.g. 'Can I know your price?')" class="flex-1 px-3.5 py-2 text-xs bg-white dark:bg-slate-950 border border-slate-300 dark:border-white/10 rounded-xl text-slate-900 dark:text-white focus:outline-none">
+                        <button onclick="runTriggerSimulation()" data-tooltip="Simulate rule match" class="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-bold transition">Test Rule</button>
+                    </div>
+                    <div id="simTestResult" class="hidden p-3 rounded-xl text-xs"></div>
                 </div>
 
                 <div id="rulesListGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -597,10 +662,10 @@
             <section id="tab-webhooks" class="tab-content hidden space-y-6">
                 <div class="flex items-center justify-between">
                     <div>
-                        <h3 class="text-base font-bold text-white">Webhooks Engine</h3>
-                        <p class="text-xs text-slate-400 mt-0.5">Dispatches live delivery receipts, inbound messages, and session updates to your external systems.</p>
+                        <h3 class="text-base font-bold text-slate-900 dark:text-white">Webhooks Engine</h3>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Dispatches live delivery receipts, inbound messages, and session updates to your external systems.</p>
                     </div>
-                    <button onclick="openNewWebhookModal()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5">
+                    <button onclick="openNewWebhookModal()" data-tooltip="Add an HTTP destination URL" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5">
                         <i data-lucide="plus" class="w-3.5 h-3.5"></i>
                         Add Destination
                     </button>
@@ -608,20 +673,20 @@
 
                 <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
                     <!-- Configured Webhooks List (6 Cols) -->
-                    <div class="lg:col-span-6 glass-panel p-5 rounded-3xl border border-white/10 space-y-4">
-                        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-300">Active Destinations</h4>
+                    <div class="lg:col-span-6 glass-panel p-5 rounded-3xl space-y-4">
+                        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">Active Destinations</h4>
                         <div id="webhooksListContainer" class="space-y-2">
                             <!-- Injected by JS -->
                         </div>
                     </div>
 
                     <!-- Webhook Delivery Log Stream (6 Cols) -->
-                    <div class="lg:col-span-6 glass-panel p-5 rounded-3xl border border-white/10 space-y-4">
+                    <div class="lg:col-span-6 glass-panel p-5 rounded-3xl space-y-4">
                         <div class="flex items-center justify-between">
-                            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-300">Recent Webhook Deliveries</h4>
-                            <button onclick="fetchWebhookHistory()" class="text-xs text-slate-400 hover:text-white"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i></button>
+                            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">Recent Webhook Deliveries</h4>
+                            <button onclick="fetchWebhookHistory()" data-tooltip="Refresh delivery logs" class="text-xs text-slate-400 hover:text-slate-800 dark:hover:text-white"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i></button>
                         </div>
-                        <div id="webhookHistoryContainer" class="h-64 overflow-y-auto space-y-2 text-xs divide-y divide-white/5">
+                        <div id="webhookHistoryContainer" class="h-64 overflow-y-auto space-y-2 text-xs divide-y divide-slate-100 dark:divide-white/5">
                             <!-- Injected by JS -->
                         </div>
                     </div>
@@ -632,45 +697,43 @@
             <!-- TAB 8: API DOCUMENTATION & SDK -->
             <!-- ========================================================= -->
             <section id="tab-docs" class="tab-content hidden space-y-6">
-                <div class="glass-panel p-6 rounded-3xl border border-white/10 space-y-4">
+                <div class="glass-panel p-6 rounded-3xl space-y-4">
                     <div>
-                        <h3 class="text-lg font-bold text-white">Outsourcing &amp; Developer Integration Guide</h3>
-                        <p class="text-xs text-slate-400 mt-1">BotsApp provides a 100% standard REST API and drop-in SDK so contractors, freelancers, or backend devs can easily integrate it with any system.</p>
+                        <h3 class="text-lg font-bold text-slate-900 dark:text-white">Outsourcing &amp; Developer Integration Guide</h3>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">BotsApp provides a 100% standard REST API and drop-in SDK so contractors, freelancers, or backend devs can easily integrate it with any system.</p>
                     </div>
 
                     <!-- Code Snippet Switcher -->
                     <div class="space-y-3">
-                        <div class="flex items-center gap-2 border-b border-white/10 pb-2">
-                            <button onclick="switchCodeLang('curl')" id="btn-lang-curl" class="text-xs font-bold text-emerald-400">cURL</button>
-                            <span class="text-slate-600">|</span>
-                            <button onclick="switchCodeLang('php')" id="btn-lang-php" class="text-xs font-bold text-slate-400 hover:text-white">PHP / Laravel</button>
-                            <span class="text-slate-600">|</span>
-                            <button onclick="switchCodeLang('js')" id="btn-lang-js" class="text-xs font-bold text-slate-400 hover:text-white">Node.js</button>
-                            <span class="text-slate-600">|</span>
-                            <button onclick="switchCodeLang('python')" id="btn-lang-python" class="text-xs font-bold text-slate-400 hover:text-white">Python</button>
+                        <div class="flex items-center gap-2 border-b border-slate-200 dark:border-white/10 pb-2">
+                            <button onclick="switchCodeLang('curl')" id="btn-lang-curl" class="text-xs font-bold text-emerald-600 dark:text-emerald-400">cURL</button>
+                            <span class="text-slate-400">|</span>
+                            <button onclick="switchCodeLang('php')" id="btn-lang-php" class="text-xs font-bold text-slate-500 hover:text-slate-900 dark:hover:text-white">PHP / Laravel</button>
+                            <span class="text-slate-400">|</span>
+                            <button onclick="switchCodeLang('js')" id="btn-lang-js" class="text-xs font-bold text-slate-500 hover:text-slate-900 dark:hover:text-white">Node.js</button>
+                            <span class="text-slate-400">|</span>
+                            <button onclick="switchCodeLang('python')" id="btn-lang-python" class="text-xs font-bold text-slate-500 hover:text-slate-900 dark:hover:text-white">Python</button>
                         </div>
 
                         <!-- Code Boxes -->
-                        <div id="code-curl" class="code-box p-4 bg-slate-950 rounded-2xl font-mono text-xs overflow-x-auto text-emerald-300">
+                        <div id="code-curl" class="code-box p-4 bg-slate-900 dark:bg-slate-950 rounded-2xl font-mono text-xs overflow-x-auto text-emerald-400">
 curl -X POST http://localhost:3001/api/send \
   -H "Content-Type: application/json" \
   -d '{"phone": "233241234567", "message": "Hello from API!"}'
                         </div>
 
-                        <div id="code-php" class="code-box hidden p-4 bg-slate-950 rounded-2xl font-mono text-xs overflow-x-auto text-sky-300">
-// Drop-in Laravel Http Client
-use Illuminate\Support\Facades\Http;
+                        <div id="code-php" class="code-box hidden p-4 bg-slate-900 dark:bg-slate-950 rounded-2xl font-mono text-xs overflow-x-auto text-sky-400">
+// Drop-in Laravel Client
+use App\Services\BotsAppClient;
 
-$response = Http::post('http://127.0.0.1:3001/api/send', [
-    'phone' => '233241234567',
-    'message' => 'Hello from Laravel!'
-]);
+$client = new BotsAppClient();
+$response = $client->sendMessage('233241234567', 'Hello from Laravel!');
 
-$data = $response->json();
-// Returns: ['success' => true, 'message_id' => '...', 'daily_count' => 1]
+// Send Rich Media
+$client->sendMedia('233241234567', '/path/to/invoice.pdf', 'Your invoice');
                         </div>
 
-                        <div id="code-js" class="code-box hidden p-4 bg-slate-950 rounded-2xl font-mono text-xs overflow-x-auto text-amber-300">
+                        <div id="code-js" class="code-box hidden p-4 bg-slate-900 dark:bg-slate-950 rounded-2xl font-mono text-xs overflow-x-auto text-amber-400">
 const axios = require('axios');
 
 const res = await axios.post('http://localhost:3001/api/send', {
@@ -680,7 +743,7 @@ const res = await axios.post('http://localhost:3001/api/send', {
 console.log(res.data);
                         </div>
 
-                        <div id="code-python" class="code-box hidden p-4 bg-slate-950 rounded-2xl font-mono text-xs overflow-x-auto text-indigo-300">
+                        <div id="code-python" class="code-box hidden p-4 bg-slate-900 dark:bg-slate-950 rounded-2xl font-mono text-xs overflow-x-auto text-indigo-400">
 import requests
 
 res = requests.post('http://localhost:3001/api/send', json={
@@ -695,20 +758,149 @@ print(res.json())
         </main>
     </div>
 
-    <!-- Modals -->
-    <!-- Pairing Code Modal -->
-    <div id="pairingModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="glass-panel max-w-sm w-full p-6 rounded-3xl border border-white/10 space-y-4">
+    <!-- MODAL: NEW CAMPAIGN (WITH CSV FILE UPLOAD) -->
+    <div id="campaignModal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="glass-panel max-w-lg w-full p-6 rounded-3xl space-y-4">
             <div class="flex items-center justify-between">
-                <h4 class="text-sm font-bold text-white">Link via Pairing Code</h4>
-                <button onclick="closePairingModal()" class="text-slate-400 hover:text-white">&times;</button>
+                <h4 class="text-sm font-bold text-slate-900 dark:text-white">Create Broadcast Campaign</h4>
+                <button onclick="closeCampaignModal()" class="text-slate-400 hover:text-slate-700 dark:hover:text-white text-lg">&times;</button>
             </div>
-            <p class="text-xs text-slate-400">Enter your phone number with country code to receive an 8-character pairing code in WhatsApp.</p>
+            
+            <form id="newCampaignForm" onsubmit="handleCreateCampaign(event)" class="space-y-3">
+                <div>
+                    <label class="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Campaign Name</label>
+                    <input type="text" id="campModalName" required placeholder="e.g. Cohort 3 Reminder" class="w-full mt-1 px-3 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/10 rounded-xl text-slate-900 dark:text-white focus:outline-none">
+                </div>
+
+                <div>
+                    <div class="flex items-center justify-between">
+                        <label class="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Recipient Contacts</label>
+                        <a href="#" onclick="downloadSampleCsv(event)" class="text-[10px] text-emerald-600 dark:text-emerald-400 hover:underline">Download Sample CSV</a>
+                    </div>
+                    
+                    <!-- Tab toggle for CSV vs manual -->
+                    <div class="flex gap-2 my-1.5">
+                        <button type="button" onclick="setContactInputMode('csv')" id="btn-mode-csv" class="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-emerald-600 text-white">Upload CSV File</button>
+                        <button type="button" onclick="setContactInputMode('manual')" id="btn-mode-manual" class="px-2.5 py-1 rounded-lg text-[10px] font-bold text-slate-500 hover:text-slate-800 dark:hover:text-white">Paste Numbers</button>
+                    </div>
+
+                    <!-- CSV Dropzone -->
+                    <div id="campCsvArea" class="dropzone p-4 text-center bg-slate-50 dark:bg-slate-900/40" onclick="document.getElementById('campCsvInput').click()">
+                        <i data-lucide="upload-cloud" class="w-6 h-6 text-emerald-600 dark:text-emerald-400 mx-auto mb-1"></i>
+                        <span class="text-xs font-semibold text-slate-700 dark:text-slate-300">Select or drop CSV / TXT file</span>
+                        <span id="campCsvSelectedName" class="block text-[10px] text-emerald-500 font-bold mt-1"></span>
+                        <input type="file" id="campCsvInput" accept=".csv,.txt,.tsv" class="hidden" onchange="handleCampCsvUpload(this)">
+                    </div>
+
+                    <!-- Manual Input -->
+                    <div id="campManualArea" class="hidden">
+                        <textarea id="campModalNumbers" rows="3" placeholder="Paste numbers (e.g. 024XXXXXXX, 050XXXXXXX)..." class="w-full px-3 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/10 rounded-xl text-slate-900 dark:text-white focus:outline-none"></textarea>
+                    </div>
+
+                    <!-- Parsed Preview -->
+                    <div id="campParsedPreview" class="hidden p-2.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-[11px] text-emerald-700 dark:text-emerald-300"></div>
+                </div>
+
+                <div>
+                    <label class="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Message Template (supports <code class="text-emerald-600 dark:text-emerald-400">{{name}}</code>, <code class="text-emerald-600 dark:text-emerald-400">{{phone}}</code>)</label>
+                    <textarea id="campModalTemplate" required rows="3" placeholder="Hello {{name}}! Welcome to class." class="w-full mt-1 px-3 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/10 rounded-xl text-slate-900 dark:text-white focus:outline-none"></textarea>
+                </div>
+
+                <div>
+                    <label class="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Interval Spacing: <span id="campIntervalDisplay" class="font-bold text-emerald-600 dark:text-emerald-400">20s</span></label>
+                    <input type="range" id="campModalInterval" min="10" max="60" value="20" oninput="document.getElementById('campIntervalDisplay').textContent = this.value + 's'" class="w-full accent-emerald-500">
+                </div>
+
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="closeCampaignModal()" class="px-4 py-2 text-xs font-semibold text-slate-500 hover:text-slate-800 dark:hover:text-white">Cancel</button>
+                    <button type="submit" id="btnSubmitCampaign" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-emerald-600/20">Create Campaign</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: PAIRING CODE -->
+    <div id="pairingModal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="glass-panel max-w-sm w-full p-6 rounded-3xl space-y-4">
+            <div class="flex items-center justify-between">
+                <h4 class="text-sm font-bold text-slate-900 dark:text-white">Link via Pairing Code</h4>
+                <button onclick="closePairingModal()" class="text-slate-400 hover:text-slate-700 dark:hover:text-white">&times;</button>
+            </div>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Enter your phone number with country code to receive an 8-character pairing code in WhatsApp.</p>
             <div>
-                <input type="text" id="pairingPhoneInput" placeholder="e.g. 23324XXXXXXX" class="w-full px-3.5 py-2 text-xs bg-slate-900 border border-white/10 rounded-xl text-white focus:outline-none">
+                <input type="text" id="pairingPhoneInput" placeholder="e.g. 23324XXXXXXX" class="w-full px-3.5 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/10 rounded-xl text-slate-900 dark:text-white focus:outline-none">
             </div>
             <button onclick="requestPairingCode()" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition">Get Code</button>
             <div id="pairingCodeDisplay" class="hidden p-4 bg-slate-950 rounded-2xl text-center font-mono text-xl font-bold tracking-widest text-emerald-400"></div>
+        </div>
+    </div>
+
+    <!-- MODAL: ADD AUTORESPONDER RULE -->
+    <div id="ruleModal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="glass-panel max-w-md w-full p-6 rounded-3xl space-y-4">
+            <div class="flex items-center justify-between">
+                <h4 class="text-sm font-bold text-slate-900 dark:text-white">New Auto-Responder Rule</h4>
+                <button onclick="closeRuleModal()" class="text-slate-400 hover:text-slate-700 dark:hover:text-white">&times;</button>
+            </div>
+            <form onsubmit="handleCreateRule(event)" class="space-y-3">
+                <div>
+                    <label class="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Rule Name</label>
+                    <input type="text" id="ruleModalName" required placeholder="e.g. Pricing Inquiries" class="w-full mt-1 px-3 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/10 rounded-xl text-slate-900 dark:text-white focus:outline-none">
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Trigger Match Type</label>
+                        <select id="ruleModalTrigger" class="w-full mt-1 px-3 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/10 rounded-xl text-slate-900 dark:text-white focus:outline-none">
+                            <option value="contains">Contains Keyword</option>
+                            <option value="exact">Exact Match</option>
+                            <option value="startsWith">Starts With</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Cooldown (seconds)</label>
+                        <input type="number" id="ruleModalCooldown" value="120" class="w-full mt-1 px-3 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/10 rounded-xl text-slate-900 dark:text-white focus:outline-none">
+                    </div>
+                </div>
+                <div>
+                    <label class="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Keywords (separated by comma)</label>
+                    <input type="text" id="ruleModalKeywords" required placeholder="price, cost, fees, tuition" class="w-full mt-1 px-3 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/10 rounded-xl text-slate-900 dark:text-white focus:outline-none">
+                </div>
+                <div>
+                    <div class="flex items-center justify-between">
+                        <label class="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Response Text</label>
+                        <div class="flex gap-1 text-[10px]">
+                            <button type="button" onclick="insertRuleTag('{name}')" class="text-emerald-500 hover:underline">{name}</button>
+                            <button type="button" onclick="insertRuleTag('{time}')" class="text-emerald-500 hover:underline">{time}</button>
+                            <button type="button" onclick="insertRuleTag('{date}')" class="text-emerald-500 hover:underline">{date}</button>
+                        </div>
+                    </div>
+                    <textarea id="ruleModalResponse" required rows="3" placeholder="Hello {name}! Our courses start at..." class="w-full mt-1 px-3 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/10 rounded-xl text-slate-900 dark:text-white focus:outline-none"></textarea>
+                </div>
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="closeRuleModal()" class="px-4 py-2 text-xs text-slate-500">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold">Save Rule</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: ADD WEBHOOK -->
+    <div id="webhookModal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="glass-panel max-w-sm w-full p-6 rounded-3xl space-y-4">
+            <div class="flex items-center justify-between">
+                <h4 class="text-sm font-bold text-slate-900 dark:text-white">Add Webhook Destination</h4>
+                <button onclick="closeWebhookModal()" class="text-slate-400 hover:text-slate-700 dark:hover:text-white">&times;</button>
+            </div>
+            <form onsubmit="handleCreateWebhook(event)" class="space-y-3">
+                <div>
+                    <label class="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Endpoint URL</label>
+                    <input type="url" id="webhookModalUrl" required placeholder="https://your-domain.com/webhooks/whatsapp" class="w-full mt-1 px-3 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/10 rounded-xl text-slate-900 dark:text-white focus:outline-none">
+                </div>
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="closeWebhookModal()" class="px-4 py-2 text-xs text-slate-500">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold">Add Webhook</button>
+                </div>
+            </form>
         </div>
     </div>
 

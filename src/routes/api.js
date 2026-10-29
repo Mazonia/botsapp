@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
 const QRCode = require('qrcode');
 const whatsapp = require('../whatsapp');
 const queue = require('../queue');
@@ -10,8 +11,10 @@ const responder = require('../responder');
 const campaigns = require('../campaigns');
 const logger = require('../utils/logger');
 const config = require('../config');
+const csvUtils = require('../utils/csv');
+const phoneUtils = require('../utils/phone');
 
-// Multer storage for media uploads
+// Multer storage for media uploads and CSV files
 const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, config.UPLOADS_DIR),
     filename: (req, file, cb) => {
@@ -302,6 +305,43 @@ router.get('/chats/:id/messages', async (req, res) => {
     }
 });
 
+// POST /api/chats/:id/messages - Send text or media directly to a chat
+router.post('/chats/:id/messages', upload.single('file'), async (req, res) => {
+    const chatId = req.params.id;
+    const { message, caption = '' } = req.body;
+    const uploadedFile = req.file;
+
+    try {
+        if (uploadedFile) {
+            const result = await queue.enqueue({
+                priority: 'normal',
+                meta: { to: chatId, type: 'chat_media' },
+                taskFn: () => whatsapp.sendMediaMessage(
+                    chatId,
+                    uploadedFile.path,
+                    uploadedFile.originalname,
+                    uploadedFile.mimetype,
+                    caption || message || ''
+                )
+            });
+            return res.json(result);
+        }
+
+        if (!message) {
+            return res.status(400).json({ success: false, message: 'Message text or file attachment is required.' });
+        }
+
+        const result = await queue.enqueue({
+            priority: 'normal',
+            meta: { to: chatId, type: 'chat_text' },
+            taskFn: () => whatsapp.sendTextMessage(chatId, message)
+        });
+        res.json(result);
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
 // POST /api/chats/:id/read - Mark chat as read
 router.post('/chats/:id/read', async (req, res) => {
     try {
@@ -313,7 +353,7 @@ router.post('/chats/:id/read', async (req, res) => {
 });
 
 // ====================================================================
-// 4. CONTACTS & NUMBER VALIDATION
+// 4. CONTACTS & NUMBER VALIDATION (WITH CSV SUPPORT)
 // ====================================================================
 
 // GET /api/contacts - List synced contacts
@@ -334,9 +374,9 @@ router.post('/contacts/validate-bulk', async (req, res) => {
     }
 
     const results = [];
-    for (const num of numbers.slice(0, 100)) {
+    for (const num of numbers.slice(0, 150)) {
         const r = await whatsapp.checkNumberRegistered(num);
-        results.push({ phone: num, exists: r.exists, jid: r.jid || null });
+        results.push({ phone: num, exists: r.exists, jid: r.jid || null, message: r.message });
     }
 
     res.json({
@@ -346,6 +386,65 @@ router.post('/contacts/validate-bulk', async (req, res) => {
         unregistered: results.filter(r => !r.exists).length,
         results
     });
+});
+
+// POST /api/contacts/validate-csv - Upload CSV file to bulk check numbers
+router.post('/contacts/validate-csv', upload.single('csvFile'), async (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({ success: false, message: 'CSV file is required.' });
+    }
+
+    try {
+        const content = fs.readFileSync(req.file.path, 'utf8');
+        const parsed = csvUtils.parseCsv(content);
+        fs.unlinkSync(req.file.path); // Clean up temp file
+
+        if (parsed.length === 0) {
+            return res.status(400).json({ success: false, message: 'No valid phone numbers found in CSV file.' });
+        }
+
+        const results = [];
+        for (const item of parsed.slice(0, 200)) {
+            const r = await whatsapp.checkNumberRegistered(item.phone);
+            results.push({
+                phone: item.phone,
+                name: item.name,
+                exists: r.exists,
+                jid: r.jid || null
+            });
+        }
+
+        res.json({
+            success: true,
+            total: results.length,
+            registered: results.filter(r => r.exists).length,
+            unregistered: results.filter(r => !r.exists).length,
+            results
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'CSV processing failed: ' + err.message });
+    }
+});
+
+// POST /api/contacts/export-csv - Generate downloadable CSV from validation results
+router.post('/contacts/export-csv', (req, res) => {
+    const { results } = req.body;
+    if (!Array.isArray(results) || results.length === 0) {
+        return res.status(400).json({ success: false, message: 'results array is required.' });
+    }
+
+    const headers = ['phone', 'name', 'status', 'jid'];
+    const rows = results.map(r => ({
+        phone: r.phone,
+        name: r.name || '',
+        status: r.exists ? 'REGISTERED' : 'UNREGISTERED',
+        jid: r.jid || ''
+    }));
+
+    const csvContent = csvUtils.generateCsv(headers, rows);
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="whatsapp-validation-results.csv"');
+    res.send(csvContent);
 });
 
 // ====================================================================
@@ -387,7 +486,7 @@ router.get('/groups/:id/invite', async (req, res) => {
 });
 
 // ====================================================================
-// 6. BULK BROADCAST CAMPAIGNS
+// 6. BULK BROADCAST CAMPAIGNS (WITH CSV UPLOAD)
 // ====================================================================
 
 // GET /api/campaigns - List campaigns
@@ -403,6 +502,32 @@ router.post('/campaigns', (req, res) => {
     }
     const camp = campaigns.createCampaign({ name, template, contacts: rawContacts, mediaUrl, intervalSeconds });
     res.json({ success: true, campaign: camp });
+});
+
+// POST /api/campaigns/upload-csv - Upload and parse CSV contact file
+router.post('/campaigns/upload-csv', upload.single('csvFile'), (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({ success: false, message: 'CSV file is required.' });
+    }
+
+    try {
+        const content = fs.readFileSync(req.file.path, 'utf8');
+        const parsed = csvUtils.parseCsv(content);
+        fs.unlinkSync(req.file.path); // Clean up temp file
+
+        if (parsed.length === 0) {
+            return res.status(400).json({ success: false, message: 'No valid phone numbers found in CSV file.' });
+        }
+
+        res.json({
+            success: true,
+            count: parsed.length,
+            preview: parsed.slice(0, 5),
+            contacts: parsed
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Failed to parse CSV: ' + err.message });
+    }
 });
 
 // POST /api/campaigns/:id/start - Run campaign
@@ -452,7 +577,7 @@ router.delete('/campaigns/:id', (req, res) => {
 });
 
 // ====================================================================
-// 7. AUTO-RESPONDER RULES
+// 7. AUTO-RESPONDER RULES & TRIGGER SIMULATOR
 // ====================================================================
 
 // GET /api/autoresponder - List rules
@@ -470,10 +595,46 @@ router.post('/autoresponder', (req, res) => {
     res.json({ success: true, rule });
 });
 
+// POST /api/autoresponder/test - Test / simulate trigger against text
+router.post('/autoresponder/test', (req, res) => {
+    const { text } = req.body;
+    if (!text) {
+        return res.status(400).json({ success: false, message: 'text is required.' });
+    }
+
+    const clean = String(text).trim().toLowerCase();
+    const rules = responder.getRules();
+    let matchedRule = null;
+
+    for (const rule of rules) {
+        if (!rule.enabled) continue;
+        if (responder.testMatch(clean, rule)) {
+            matchedRule = rule;
+            break;
+        }
+    }
+
+    res.json({
+        success: true,
+        matched: Boolean(matchedRule),
+        rule: matchedRule
+    });
+});
+
 // PUT /api/autoresponder/:id - Update rule
 router.put('/autoresponder/:id', (req, res) => {
     const updated = responder.updateRule(req.params.id, req.body);
     if (!updated) return res.status(404).json({ success: false, message: 'Rule not found' });
+    res.json({ success: true, rule: updated });
+});
+
+// POST /api/autoresponder/:id/toggle - Toggle rule active state
+router.post('/api/autoresponder/:id/toggle', (req, res) => {
+    const rules = responder.getRules();
+    const rule = rules.find(r => r.id === req.params.id);
+    if (!rule) return res.status(404).json({ success: false, message: 'Rule not found' });
+
+    const updated = responder.updateRule(req.params.id, { enabled: !rule.enabled });
     res.json({ success: true, rule: updated });
 });
 
