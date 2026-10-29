@@ -1,0 +1,35 @@
+# Node dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment & sensitive data
+.env
+.env.local
+.env.*.local
+
+# WhatsApp session data & cache
+.wwebjs_auth/
+.wwebjs_cache/
+.session_start
+session/
+
+# Logs & PIDs
+*.log
+bot.log
+bot_err.log
+*.pid
+bot.pid
+
+# Uploaded & temporary files
+uploads/*
+!uploads/.gitkeep
+temp/*
+!temp/.gitkeep
+
+# System & IDE files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

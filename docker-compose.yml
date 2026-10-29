@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  botsapp:
+    build: .
+    container_name: botsapp_gateway
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - HOST=0.0.0.0
+      - API_KEY=
+      - WEBHOOK_URLS=http://host.docker.internal:8000/webhooks/whatsapp
+      - WA_DAILY_LIMIT=120
+      - ANTI_BAN_SPEED_MULTIPLIER=1.0
+      - WARMUP_PROTECTION=true
+      - HEADLESS=true
+    volumes:
+      - botsapp_auth:/app/.wwebjs_auth
+      - botsapp_data:/app/data
+      - botsapp_logs:/app/logs
+
+volumes:
+  botsapp_auth:
+  botsapp_data:
+  botsapp_logs:

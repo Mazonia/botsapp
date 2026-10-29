@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BotsApp — Enterprise WhatsApp Gateway</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#ecfdf5',
+                            100: '#d1fae5',
+                            400: '#34d399',
+                            500: '#10b981',
+                            600: '#059669',
+                            700: '#047857',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Socket.io -->
+    <script src="/socket.io/socket.io.js"></script>
+    <link rel="stylesheet" href="/css/custom.css">
+</head>
+<body class="min-h-screen bg-[#090d16] text-slate-100 flex flex-col antialiased selection:bg-emerald-500/30 selection:text-emerald-300">
+
+    <!-- Top Navigation Header -->
+    <header class="sticky top-0 z-50 bg-[#0c1220]/90 backdrop-blur-xl border-b border-white/10 px-4 lg:px-8 py-3.5 flex items-center justify-between">
+        <div class="flex items-center gap-3.5">
+            <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-400 p-0.5 shadow-lg shadow-emerald-500/20 flex items-center justify-center">
+                <div class="w-full h-full bg-[#090d16] rounded-[14px] flex items-center justify-center text-emerald-400">
+                    <i data-lucide="message-square" class="w-5 h-5"></i>
+                </div>
+            </div>
+            <div>
+                <div class="flex items-center gap-2">
+                    <span class="text-base font-extrabold tracking-tight text-white">BotsApp</span>
+                    <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Gateway v2.0</span>
+                </div>
+                <p class="text-xs text-slate-400">Enterprise Standalone WhatsApp Engine</p>
+            </div>
+        </div>
+
+        <!-- Header Status & Action Controls -->
+        <div class="flex items-center gap-3">
+            <!-- Dynamic State Badge -->
+            <div id="topStatusBadge" class="flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20 transition-all duration-300">
+                <span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+                <span id="topStatusText">Connecting...</span>
+            </div>
+
+            <button onclick="openPairingModal()" class="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-800/80 hover:bg-slate-700 text-slate-200 border border-white/10 transition">
+                <i data-lucide="key" class="w-3.5 h-3.5 text-emerald-400"></i>
+                Pairing Code
+            </button>
+
+            <button onclick="triggerResetSession()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/20 transition">
+                <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-rose-400"></i>
+                <span class="hidden sm:inline">Reset Session</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main App Layout (Sidebar + Content) -->
+    <div class="flex-1 flex flex-col md:flex-row overflow-hidden">
+        
+        <!-- Sidebar Navigation -->
+        <aside class="w-full md:w-64 bg-[#0c1220]/60 border-r border-white/5 p-3 md:p-4 flex md:flex-col gap-1.5 shrink-0 overflow-x-auto md:overflow-x-visible">
+            <div class="text-[11px] font-bold uppercase tracking-wider text-slate-500 px-3 py-1 hidden md:block">Navigation</div>
+            
+            <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-white/5 transition active-nav">
+                <i data-lucide="layout-dashboard" class="w-4 h-4 text-emerald-400"></i>
+                <span>Dashboard</span>
+            </button>
+
+            <button onclick="switchTab('chat')" id="nav-chat" class="nav-btn flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-white/5 transition">
+                <i data-lucide="messages-square" class="w-4 h-4 text-teal-400"></i>
+                <span>Live Inbox</span>
+            </button>
+
+            <button onclick="switchTab('composer')" id="nav-composer" class="nav-btn flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-white/5 transition">
+                <i data-lucide="send" class="w-4 h-4 text-sky-400"></i>
+                <span>Send & Media</span>
+            </button>
+
+            <button onclick="switchTab('campaigns')" id="nav-campaigns" class="nav-btn flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-white/5 transition">
+                <i data-lucide="megaphone" class="w-4 h-4 text-indigo-400"></i>
+                <span>Broadcaster</span>
+            </button>
+
+            <button onclick="switchTab('contacts')" id="nav-contacts" class="nav-btn flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-white/5 transition">
+                <i data-lucide="user-check" class="w-4 h-4 text-purple-400"></i>
+                <span>Number Check</span>
+            </button>
+
+            <button onclick="switchTab('autoresponder')" id="nav-autoresponder" class="nav-btn flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-white/5 transition">
+                <i data-lucide="bot" class="w-4 h-4 text-amber-400"></i>
+                <span>Auto-Responder</span>
+            </button>
+
+            <button onclick="switchTab('webhooks')" id="nav-webhooks" class="nav-btn flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-white/5 transition">
+                <i data-lucide="webhook" class="w-4 h-4 text-rose-400"></i>
+                <span>Webhooks</span>
+            </button>
+
+            <button onclick="switchTab('docs')" id="nav-docs" class="nav-btn flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-white/5 transition">
+                <i data-lucide="code" class="w-4 h-4 text-emerald-400"></i>
+                <span>API Docs & SDK</span>
+            </button>
+
+            <!-- Bottom Session Info Widget -->
+            <div class="mt-auto hidden md:block pt-4 border-t border-white/5">
+                <div class="p-3 rounded-2xl bg-white/[0.03] border border-white/5 text-[11px] space-y-1.5">
+                    <div class="flex items-center justify-between text-slate-400">
+                        <span>Send Queue:</span>
+                        <span id="sidebarQueueCount" class="font-bold text-white">0 pending</span>
+                    </div>
+                    <div class="flex items-center justify-between text-slate-400">
+                        <span>Daily Sent:</span>
+                        <span id="sidebarDailyCount" class="font-bold text-emerald-400">0 / 120</span>
+                    </div>
+                    <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                        <div id="sidebarProgressBar" class="bg-emerald-500 h-full rounded-full transition-all duration-300" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Body Content Workspace -->
+        <main class="flex-1 overflow-y-auto p-4 md:p-8">
+            
+            <!-- ========================================================= -->
+            <!-- TAB 1: DASHBOARD -->
+            <!-- ========================================================= -->
+            <section id="tab-dashboard" class="tab-content space-y-6">
+                
+                <!-- Quick KPI Grid -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <!-- Card 1: Connection -->
+                    <div class="glass-panel p-5 rounded-3xl border border-white/10 relative overflow-hidden">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-medium text-slate-400">WhatsApp State</span>
+                            <div class="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
+                                <i data-lucide="activity" class="w-4 h-4"></i>
+                            </div>
+                        </div>
+                        <p id="kpiState" class="text-lg font-bold text-white mt-2">Checking...</p>
+                        <p id="kpiUser" class="text-xs text-slate-400 mt-1 truncate">Waiting for scan</p>
+                    </div>
+
+                    <!-- Card 2: Anti-ban & Warmup -->
+                    <div class="glass-panel p-5 rounded-3xl border border-white/10 relative overflow-hidden">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-medium text-slate-400">Anti-Ban Protection</span>
+                            <div class="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center">
+                                <i data-lucide="shield-check" class="w-4 h-4"></i>
+                            </div>
+                        </div>
+                        <p id="kpiProfile" class="text-lg font-bold text-amber-400 mt-2">Active Delay</p>
+                        <p id="kpiAge" class="text-xs text-slate-400 mt-1">Session Age: 0h</p>
+                    </div>
+
+                    <!-- Card 3: Daily Sends -->
+                    <div class="glass-panel p-5 rounded-3xl border border-white/10 relative overflow-hidden">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-medium text-slate-400">Today's Messages</span>
+                            <div class="w-8 h-8 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center">
+                                <i data-lucide="send" class="w-4 h-4"></i>
+                            </div>
+                        </div>
+                        <p id="kpiDaily" class="text-lg font-bold text-white mt-2">0 / 120</p>
+                        <p class="text-xs text-slate-400 mt-1">Resets at midnight</p>
+                    </div>
+
+                    <!-- Card 4: Send Queue -->
+                    <div class="glass-panel p-5 rounded-3xl border border-white/10 relative overflow-hidden">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-medium text-slate-400">Active Queue</span>
+                            <div class="w-8 h-8 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center">
+                                <i data-lucide="layers" class="w-4 h-4"></i>
+                            </div>
+                        </div>
+                        <p id="kpiQueue" class="text-lg font-bold text-white mt-2">0 in queue</p>
+                        <p id="kpiQueueState" class="text-xs text-emerald-400 mt-1">Ready for requests</p>
+                    </div>
+                </div>
+
+                <!-- Main Connection / QR Scanner Area -->
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    
+                    <!-- Scanner Panel (7 Cols) -->
+                    <div class="lg:col-span-7 glass-panel p-6 md:p-8 rounded-3xl border border-white/10 flex flex-col items-center justify-center text-center relative overflow-hidden">
+                        <div class="max-w-md w-full space-y-4">
+                            <div>
+                                <h3 class="text-base font-bold text-white tracking-wide">WhatsApp Device Gateway</h3>
+                                <p class="text-xs text-slate-400 mt-1">Open WhatsApp on your mobile phone &rarr; <b>Linked Devices</b> &rarr; <b>Link a Device</b> &rarr; Point your camera at this QR code</p>
+                            </div>
+
+                            <!-- QR / Connected State Box -->
+                            <div class="p-6 bg-slate-900/90 rounded-3xl border border-white/10 inline-block shadow-2xl relative min-w-[280px]">
+                                <!-- Connected Banner -->
+                                <div id="dashConnectedBox" class="hidden py-8 px-4 space-y-3">
+                                    <div class="w-16 h-16 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto text-3xl font-bold shadow-lg shadow-emerald-500/20">
+                                        <i data-lucide="check" class="w-8 h-8"></i>
+                                    </div>
+                                    <h4 class="text-base font-bold text-emerald-400">Gateway Active &amp; Ready</h4>
+                                    <p id="connectedDeviceDetail" class="text-xs text-slate-300">WhatsApp Web authenticated</p>
+                                    <div class="pt-2">
+                                        <button onclick="switchTab('composer')" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition shadow-lg shadow-emerald-600/20">
+                                            Send Test Message
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- QR Image Display -->
+                                <div id="dashQrBox" class="p-2 bg-white rounded-2xl shadow-inner">
+                                    <img id="dashQrImg" src="" alt="WhatsApp QR Code" class="w-64 h-64 mx-auto object-contain hidden rounded-lg">
+                                    <div id="dashQrLoading" class="w-64 h-64 flex flex-col items-center justify-center gap-3 text-slate-600">
+                                        <div class="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+                                        <span id="dashLoadingText" class="text-xs font-medium text-slate-600">Initializing WhatsApp engine...</span>
+                                        <span class="text-[10px] text-slate-400">Auto-refresh active</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center justify-center gap-2 pt-2">
+                                <button onclick="fetchStatus()" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold border border-white/10 transition flex items-center gap-1.5">
+                                    <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i>
+                                    Refresh
+                                </button>
+                                <button onclick="openPairingModal()" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold border border-white/10 transition flex items-center gap-1.5">
+                                    <i data-lucide="smartphone" class="w-3.5 h-3.5"></i>
+                                    Link with Phone Number
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Diagnostic & Send Test (5 Cols) -->
+                    <div class="lg:col-span-5 glass-panel p-6 rounded-3xl border border-white/10 flex flex-col justify-between space-y-5">
+                        <div>
+                            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                                <i data-lucide="zap" class="w-4 h-4 text-emerald-400"></i>
+                                Quick Diagnostic Message
+                            </h3>
+                            <p class="text-xs text-slate-400 mt-1">Test the anti-ban queue by sending a fast message directly to any WhatsApp number.</p>
+
+                            <form id="quickTestForm" onsubmit="handleQuickSend(event)" class="space-y-3 mt-4">
+                                <div>
+                                    <label class="text-[11px] font-semibold text-slate-300">Recipient Phone (with country code)</label>
+                                    <input type="text" id="quickPhone" required placeholder="e.g. 23324XXXXXXX or 024XXXXXXX" class="w-full mt-1 px-3.5 py-2.5 text-xs bg-slate-900 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500">
+                                </div>
+
+                                <div>
+                                    <label class="text-[11px] font-semibold text-slate-300">Message Content</label>
+                                    <textarea id="quickMessage" rows="3" class="w-full mt-1 px-3.5 py-2 text-xs bg-slate-900 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500">Hello from BotsApp Gateway v2.0! System is online and healthy. 🚀</textarea>
+                                </div>
+
+                                <div class="flex items-center justify-between pt-1">
+                                    <span class="text-[11px] text-slate-400">Priority: Normal</span>
+                                    <button type="submit" id="btnQuickSend" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-lg shadow-emerald-600/20">
+                                        <i data-lucide="send" class="w-3.5 h-3.5"></i>
+                                        Send Test
+                                    </button>
+                                </div>
+                            </form>
+                            <div id="quickSendAlert" class="hidden mt-3 p-3 rounded-xl text-xs"></div>
+                        </div>
+
+                        <!-- System Queue Controls -->
+                        <div class="p-4 rounded-2xl bg-white/[0.02] border border-white/5 space-y-2">
+                            <div class="flex items-center justify-between text-xs">
+                                <span class="font-semibold text-slate-300">Queue Management</span>
+                                <div class="flex items-center gap-2">
+                                    <button onclick="pauseQueue()" class="text-[11px] text-amber-400 hover:underline">Pause</button>
+                                    <span class="text-slate-600">•</span>
+                                    <button onclick="resumeQueue()" class="text-[11px] text-emerald-400 hover:underline">Resume</button>
+                                    <span class="text-slate-600">•</span>
+                                    <button onclick="clearQueue()" class="text-[11px] text-rose-400 hover:underline">Clear</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Live Stream Console Log -->
+                <div class="glass-panel p-5 rounded-3xl border border-white/10 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="terminal" class="w-4 h-4 text-emerald-400"></i>
+                            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300">Real-Time Event Stream</h3>
+                        </div>
+                        <button onclick="clearLogDisplay()" class="text-[11px] text-slate-400 hover:text-white transition">Clear Stream</button>
+                    </div>
+                    <div id="liveConsole" class="h-44 bg-slate-950/80 rounded-2xl p-3 font-mono text-[11px] overflow-y-auto space-y-1 text-slate-300 border border-white/5">
+                        <div class="text-slate-500">[System] Initializing console listener...</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========================================================= -->
+            <!-- TAB 2: LIVE CHAT / INBOX -->
+            <!-- ========================================================= -->
+            <section id="tab-chat" class="tab-content hidden h-[calc(100vh-140px)]">
+                <div class="glass-panel rounded-3xl border border-white/10 h-full flex overflow-hidden">
+                    
+                    <!-- Left: Chat List -->
+                    <div class="w-full md:w-80 border-r border-white/5 flex flex-col bg-slate-900/40">
+                        <div class="p-3.5 border-b border-white/5 flex items-center justify-between">
+                            <h3 class="text-sm font-bold text-white">Conversations</h3>
+                            <button onclick="refreshChats()" class="text-slate-400 hover:text-white transition"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i></button>
+                        </div>
+                        <div class="p-2 border-b border-white/5">
+                            <input type="text" id="chatSearchInput" oninput="filterChatList(this.value)" placeholder="Search chats..." class="w-full px-3 py-1.5 text-xs bg-slate-950 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none">
+                        </div>
+                        <div id="chatListContainer" class="flex-1 overflow-y-auto divide-y divide-white/5">
+                            <div class="p-4 text-xs text-center text-slate-500">Loading chats...</div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Active Chat View -->
+                    <div class="hidden md:flex flex-1 flex-col bg-slate-950/40">
+                        <div id="activeChatHeader" class="p-3.5 border-b border-white/5 flex items-center justify-between bg-slate-900/30">
+                            <div class="flex items-center gap-3">
+                                <div id="activeChatAvatar" class="w-9 h-9 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-sm">
+                                    ?
+                                </div>
+                                <div>
+                                    <h4 id="activeChatTitle" class="text-xs font-bold text-white">Select a conversation</h4>
+                                    <p id="activeChatSubtitle" class="text-[10px] text-slate-400">Click any chat on the left to read and reply</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Message Bubbles Thread -->
+                        <div id="chatThread" class="flex-1 overflow-y-auto p-4 space-y-3 flex flex-col">
+                            <div class="m-auto text-xs text-slate-500 text-center">
+                                Select a conversation from the left to start chatting live.
+                            </div>
+                        </div>
+
+                        <!-- Quick Reply Composer -->
+                        <form id="chatReplyForm" onsubmit="handleSendReply(event)" class="p-3 border-t border-white/5 bg-slate-900/30 flex items-center gap-2">
+                            <input type="text" id="chatReplyInput" placeholder="Type a message..." class="flex-1 px-4 py-2 text-xs bg-slate-900 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500">
+                            <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-lg shadow-emerald-600/20">
+                                <i data-lucide="send" class="w-3.5 h-3.5"></i>
+                                Reply
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========================================================= -->
+            <!-- TAB 3: MESSAGE COMPOSER & MULTI-FORMAT -->
+            <!-- ========================================================= -->
+            <section id="tab-composer" class="tab-content hidden space-y-6">
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    
+                    <!-- Composer Form Panel (7 Cols) -->
+                    <div class="lg:col-span-7 glass-panel p-6 rounded-3xl border border-white/10 space-y-5">
+                        <div>
+                            <h3 class="text-base font-bold text-white">Multi-Format Message Studio</h3>
+                            <p class="text-xs text-slate-400 mt-1">Send formatted text, high-res images, audio recordings, documents, polls, or contact cards.</p>
+                        </div>
+
+                        <!-- Format Selector Tabs -->
+                        <div class="flex flex-wrap gap-1.5 p-1 bg-slate-900/80 rounded-2xl border border-white/5">
+                            <button onclick="setComposerFormat('text')" id="btn-format-text" class="format-btn px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-500 text-white">Text</button>
+                            <button onclick="setComposerFormat('image')" id="btn-format-image" class="format-btn px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white">Image / Video</button>
+                            <button onclick="setComposerFormat('document')" id="btn-format-document" class="format-btn px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white">Document / PDF</button>
+                            <button onclick="setComposerFormat('audio')" id="btn-format-audio" class="format-btn px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white">Voice Note</button>
+                            <button onclick="setComposerFormat('poll')" id="btn-format-poll" class="format-btn px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white">Interactive Poll</button>
+                            <button onclick="setComposerFormat('location')" id="btn-format-location" class="format-btn px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white">Location</button>
+                        </div>
+
+                        <form id="composerForm" onsubmit="handleSendComposer(event)" class="space-y-4">
+                            <!-- Recipient Phone -->
+                            <div>
+                                <label class="text-[11px] font-semibold text-slate-300">Recipient Phone Number / Group ID</label>
+                                <input type="text" id="composerPhone" required placeholder="e.g. 23324XXXXXXX or group id" oninput="updatePreviewPhone(this.value)" class="w-full mt-1 px-3.5 py-2.5 text-xs bg-slate-900 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500">
+                            </div>
+
+                            <!-- DYNAMIC FIELD: TEXT -->
+                            <div id="field-text" class="space-y-2">
+                                <div class="flex items-center justify-between">
+                                    <label class="text-[11px] font-semibold text-slate-300">Message Text (Markdown supported)</label>
+                                    <div class="flex gap-1 text-[10px]">
+                                        <button type="button" onclick="insertSyntax('*', '*')" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 font-bold">*Bold*</button>
+                                        <button type="button" onclick="insertSyntax('_', '_')" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 italic">_Italic_</button>
+                                        <button type="button" onclick="insertSyntax('~', '~')" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 line-through">~Strike~</button>
+                                    </div>
+                                </div>
+                                <textarea id="composerText" rows="4" oninput="updatePreviewText(this.value)" placeholder="Write your WhatsApp message here..." class="w-full px-3.5 py-2.5 text-xs bg-slate-900 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"></textarea>
+                            </div>
+
+                            <!-- DYNAMIC FIELD: MEDIA (IMAGE/VIDEO/DOC/AUDIO) -->
+                            <div id="field-media" class="hidden space-y-3">
+                                <div>
+                                    <label class="text-[11px] font-semibold text-slate-300">Upload File OR Provide Remote Web URL</label>
+                                    <input type="file" id="composerFile" class="w-full mt-1 text-xs text-slate-400 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-slate-200 hover:file:bg-slate-700">
+                                </div>
+                                <div>
+                                    <input type="url" id="composerMediaUrl" placeholder="Or paste public file URL (e.g. https://.../image.png)" class="w-full px-3.5 py-2 text-xs bg-slate-900 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none">
+                                </div>
+                                <div>
+                                    <label class="text-[11px] font-semibold text-slate-300">Caption (Optional)</label>
+                                    <input type="text" id="composerCaption" oninput="updatePreviewText(this.value)" placeholder="Attachment caption..." class="w-full mt-1 px-3.5 py-2 text-xs bg-slate-900 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none">
+                                </div>
+                            </div>
+
+                            <!-- DYNAMIC FIELD: POLL -->
+                            <div id="field-poll" class="hidden space-y-3">
+                                <div>
+                                    <label class="text-[11px] font-semibold text-slate-300">Poll Question</label>
+                                    <input type="text" id="composerPollQuestion" placeholder="e.g. Which course are you joining?" class="w-full mt-1 px-3.5 py-2 text-xs bg-slate-900 border border-white/10 rounded-xl text-white focus:outline-none">
+                                </div>
+                                <div>
+                                    <label class="text-[11px] font-semibold text-slate-300">Options (one per line, minimum 2)</label>
+                                    <textarea id="composerPollOptions" rows="3" placeholder="Full Stack Web Dev&#10;Data Science&#10;Mobile App Dev" class="w-full mt-1 px-3.5 py-2 text-xs bg-slate-900 border border-white/10 rounded-xl text-white focus:outline-none"></textarea>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <input type="checkbox" id="composerPollMulti" class="rounded bg-slate-800 border-white/10 text-emerald-500">
+                                    <label for="composerPollMulti" class="text-xs text-slate-300">Allow multiple answers</label>
+                                </div>
+                            </div>
+
+                            <!-- DYNAMIC FIELD: LOCATION -->
+                            <div id="field-location" class="hidden space-y-3">
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="text-[11px] font-semibold text-slate-300">Latitude</label>
+                                        <input type="text" id="composerLat" placeholder="5.6037" class="w-full mt-1 px-3 py-2 text-xs bg-slate-900 border border-white/10 rounded-xl text-white">
+                                    </div>
+                                    <div>
+                                        <label class="text-[11px] font-semibold text-slate-300">Longitude</label>
+                                        <input type="text" id="composerLng" placeholder="-0.1870" class="w-full mt-1 px-3 py-2 text-xs bg-slate-900 border border-white/10 rounded-xl text-white">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="text-[11px] font-semibold text-slate-300">Address / Location Title</label>
+                                    <input type="text" id="composerLocDesc" placeholder="e.g. GeekByte Tech Hub, Accra" class="w-full mt-1 px-3 py-2 text-xs bg-slate-900 border border-white/10 rounded-xl text-white">
+                                </div>
+                            </div>
+
+                            <button type="submit" id="btnComposerSend" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20">
+                                <i data-lucide="send" class="w-4 h-4"></i>
+                                Send Message (Anti-Ban Queued)
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Live Mobile Mockup Preview (5 Cols) -->
+                    <div class="lg:col-span-5 flex flex-col items-center justify-center">
+                        <div class="phone-mockup w-72 bg-[#0b141a] p-3 text-slate-200">
+                            <!-- Mobile Header -->
+                            <div class="flex items-center gap-2.5 pb-3 border-b border-white/10">
+                                <div class="w-7 h-7 rounded-full bg-emerald-600 flex items-center justify-center text-xs font-bold">W</div>
+                                <div class="flex-1">
+                                    <p id="previewRecipient" class="text-xs font-bold text-white truncate">+233 XXXXXXXX</p>
+                                    <p class="text-[9px] text-emerald-400">online</p>
+                                </div>
+                            </div>
+
+                            <!-- Mobile Chat Area -->
+                            <div class="h-80 overflow-y-auto py-3 space-y-2">
+                                <div class="bubble-sent max-w-[85%] ml-auto p-2.5 rounded-2xl text-[11px] space-y-1 shadow">
+                                    <div id="previewBubbleText" class="whitespace-pre-wrap break-words">Type a message to see how it renders live on WhatsApp...</div>
+                                    <div class="flex items-center justify-end gap-1 text-[9px] text-emerald-200">
+                                        <span>12:00 PM</span>
+                                        <span>✓✓</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Mobile Bottom Input Mock -->
+                            <div class="pt-2 border-t border-white/10 flex items-center gap-2">
+                                <div class="flex-1 bg-slate-800 rounded-full px-3 py-1.5 text-[10px] text-slate-400">Message</div>
+                                <div class="w-7 h-7 rounded-full bg-emerald-600 flex items-center justify-center text-white"><i data-lucide="mic" class="w-3.5 h-3.5"></i></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========================================================= -->
+            <!-- TAB 4: BULK BROADCASTER -->
+            <!-- ========================================================= -->
+            <section id="tab-campaigns" class="tab-content hidden space-y-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-base font-bold text-white">Broadcast Campaign Engine</h3>
+                        <p class="text-xs text-slate-400 mt-0.5">Send personalized messages to thousands with smart human pacing and zero ban risk.</p>
+                    </div>
+                    <button onclick="openNewCampaignModal()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow-lg shadow-emerald-600/20">
+                        <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                        New Campaign
+                    </button>
+                </div>
+
+                <!-- Campaigns List Table -->
+                <div class="glass-panel rounded-3xl border border-white/10 overflow-hidden">
+                    <div class="p-4 border-b border-white/5 flex items-center justify-between">
+                        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-300">All Broadcast Campaigns</h4>
+                        <button onclick="fetchCampaigns()" class="text-xs text-slate-400 hover:text-white"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i></button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-white/[0.02] text-slate-400 uppercase font-semibold text-[10px]">
+                                <tr>
+                                    <th class="p-4">Campaign</th>
+                                    <th class="p-4">Status</th>
+                                    <th class="p-4">Progress</th>
+                                    <th class="p-4">Spacing</th>
+                                    <th class="p-4">Created</th>
+                                    <th class="p-4 text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="campaignsTableBody" class="divide-y divide-white/5 text-slate-300">
+                                <tr>
+                                    <td colspan="6" class="p-6 text-center text-slate-500">No campaigns created yet. Click "New Campaign" to begin.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========================================================= -->
+            <!-- TAB 5: NUMBER CHECK & CONTACTS -->
+            <!-- ========================================================= -->
+            <section id="tab-contacts" class="tab-content hidden space-y-6">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    
+                    <!-- Single Check -->
+                    <div class="glass-panel p-6 rounded-3xl border border-white/10 space-y-4">
+                        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                            <i data-lucide="check-circle" class="w-4 h-4 text-emerald-400"></i>
+                            Instant Number Validator
+                        </h3>
+                        <p class="text-xs text-slate-400">Check if a single telephone number is active and registered on WhatsApp.</p>
+
+                        <div class="flex gap-2">
+                            <input type="text" id="singleCheckInput" placeholder="e.g. 024XXXXXXX or +233..." class="flex-1 px-3.5 py-2 text-xs bg-slate-900 border border-white/10 rounded-xl text-white focus:outline-none focus:border-emerald-500">
+                            <button onclick="runSingleCheck()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition">Check</button>
+                        </div>
+                        <div id="singleCheckResult" class="hidden p-3 rounded-xl text-xs"></div>
+                    </div>
+
+                    <!-- Bulk Validator -->
+                    <div class="glass-panel p-6 rounded-3xl border border-white/10 space-y-4">
+                        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                            <i data-lucide="users" class="w-4 h-4 text-purple-400"></i>
+                            Bulk Number Checker (CSV / List)
+                        </h3>
+                        <p class="text-xs text-slate-400">Filter unregistered numbers out of your list before sending marketing blasts.</p>
+
+                        <textarea id="bulkCheckInput" rows="3" placeholder="Paste numbers separated by commas or line breaks..." class="w-full px-3.5 py-2 text-xs bg-slate-900 border border-white/10 rounded-xl text-white focus:outline-none"></textarea>
+                        <button onclick="runBulkCheck()" id="btnBulkCheck" class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold transition">Validate All</button>
+                        <div id="bulkCheckResult" class="hidden p-3 rounded-xl text-xs"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========================================================= -->
+            <!-- TAB 6: AUTO-RESPONDER -->
+            <!-- ========================================================= -->
+            <section id="tab-autoresponder" class="tab-content hidden space-y-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-base font-bold text-white">Keyword Auto-Responder &amp; Chatbot</h3>
+                        <p class="text-xs text-slate-400 mt-0.5">Define automated keyword reply rules with humanized delays.</p>
+                    </div>
+                    <button onclick="openNewRuleModal()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow-lg shadow-emerald-600/20">
+                        <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                        Add Rule
+                    </button>
+                </div>
+
+                <div id="rulesListGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Dynamic Rules injected by JS -->
+                </div>
+            </section>
+
+            <!-- ========================================================= -->
+            <!-- TAB 7: WEBHOOKS & INTEGRATIONS -->
+            <!-- ========================================================= -->
+            <section id="tab-webhooks" class="tab-content hidden space-y-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-base font-bold text-white">Webhooks Engine</h3>
+                        <p class="text-xs text-slate-400 mt-0.5">Dispatches live delivery receipts, inbound messages, and session updates to your external systems.</p>
+                    </div>
+                    <button onclick="openNewWebhookModal()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5">
+                        <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                        Add Destination
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    <!-- Configured Webhooks List (6 Cols) -->
+                    <div class="lg:col-span-6 glass-panel p-5 rounded-3xl border border-white/10 space-y-4">
+                        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-300">Active Destinations</h4>
+                        <div id="webhooksListContainer" class="space-y-2">
+                            <!-- Injected by JS -->
+                        </div>
+                    </div>
+
+                    <!-- Webhook Delivery Log Stream (6 Cols) -->
+                    <div class="lg:col-span-6 glass-panel p-5 rounded-3xl border border-white/10 space-y-4">
+                        <div class="flex items-center justify-between">
+                            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-300">Recent Webhook Deliveries</h4>
+                            <button onclick="fetchWebhookHistory()" class="text-xs text-slate-400 hover:text-white"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i></button>
+                        </div>
+                        <div id="webhookHistoryContainer" class="h-64 overflow-y-auto space-y-2 text-xs divide-y divide-white/5">
+                            <!-- Injected by JS -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========================================================= -->
+            <!-- TAB 8: API DOCUMENTATION & SDK -->
+            <!-- ========================================================= -->
+            <section id="tab-docs" class="tab-content hidden space-y-6">
+                <div class="glass-panel p-6 rounded-3xl border border-white/10 space-y-4">
+                    <div>
+                        <h3 class="text-lg font-bold text-white">Outsourcing &amp; Developer Integration Guide</h3>
+                        <p class="text-xs text-slate-400 mt-1">BotsApp provides a 100% standard REST API and drop-in SDK so contractors, freelancers, or backend devs can easily integrate it with any system.</p>
+                    </div>
+
+                    <!-- Code Snippet Switcher -->
+                    <div class="space-y-3">
+                        <div class="flex items-center gap-2 border-b border-white/10 pb-2">
+                            <button onclick="switchCodeLang('curl')" id="btn-lang-curl" class="text-xs font-bold text-emerald-400">cURL</button>
+                            <span class="text-slate-600">|</span>
+                            <button onclick="switchCodeLang('php')" id="btn-lang-php" class="text-xs font-bold text-slate-400 hover:text-white">PHP / Laravel</button>
+                            <span class="text-slate-600">|</span>
+                            <button onclick="switchCodeLang('js')" id="btn-lang-js" class="text-xs font-bold text-slate-400 hover:text-white">Node.js</button>
+                            <span class="text-slate-600">|</span>
+                            <button onclick="switchCodeLang('python')" id="btn-lang-python" class="text-xs font-bold text-slate-400 hover:text-white">Python</button>
+                        </div>
+
+                        <!-- Code Boxes -->
+                        <div id="code-curl" class="code-box p-4 bg-slate-950 rounded-2xl font-mono text-xs overflow-x-auto text-emerald-300">
+curl -X POST http://localhost:3001/api/send \
+  -H "Content-Type: application/json" \
+  -d '{"phone": "233241234567", "message": "Hello from API!"}'
+                        </div>
+
+                        <div id="code-php" class="code-box hidden p-4 bg-slate-950 rounded-2xl font-mono text-xs overflow-x-auto text-sky-300">
+// Drop-in Laravel Http Client
+use Illuminate\Support\Facades\Http;
+
+$response = Http::post('http://127.0.0.1:3001/api/send', [
+    'phone' => '233241234567',
+    'message' => 'Hello from Laravel!'
+]);
+
+$data = $response->json();
+// Returns: ['success' => true, 'message_id' => '...', 'daily_count' => 1]
+                        </div>
+
+                        <div id="code-js" class="code-box hidden p-4 bg-slate-950 rounded-2xl font-mono text-xs overflow-x-auto text-amber-300">
+const axios = require('axios');
+
+const res = await axios.post('http://localhost:3001/api/send', {
+    phone: '233241234567',
+    message: 'Hello from Node.js!'
+});
+console.log(res.data);
+                        </div>
+
+                        <div id="code-python" class="code-box hidden p-4 bg-slate-950 rounded-2xl font-mono text-xs overflow-x-auto text-indigo-300">
+import requests
+
+res = requests.post('http://localhost:3001/api/send', json={
+    'phone': '233241234567',
+    'message': 'Hello from Python!'
+})
+print(res.json())
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <!-- Pairing Code Modal -->
+    <div id="pairingModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="glass-panel max-w-sm w-full p-6 rounded-3xl border border-white/10 space-y-4">
+            <div class="flex items-center justify-between">
+                <h4 class="text-sm font-bold text-white">Link via Pairing Code</h4>
+                <button onclick="closePairingModal()" class="text-slate-400 hover:text-white">&times;</button>
+            </div>
+            <p class="text-xs text-slate-400">Enter your phone number with country code to receive an 8-character pairing code in WhatsApp.</p>
+            <div>
+                <input type="text" id="pairingPhoneInput" placeholder="e.g. 23324XXXXXXX" class="w-full px-3.5 py-2 text-xs bg-slate-900 border border-white/10 rounded-xl text-white focus:outline-none">
+            </div>
+            <button onclick="requestPairingCode()" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition">Get Code</button>
+            <div id="pairingCodeDisplay" class="hidden p-4 bg-slate-950 rounded-2xl text-center font-mono text-xl font-bold tracking-widest text-emerald-400"></div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/js/app.js"></script>
+    <script>
+        // Init Lucide icons
+        lucide.createIcons();
+    </script>
+</body>
+</html>

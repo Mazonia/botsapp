@@ -1,0 +1,79 @@
+{
+  "info": {
+    "name": "BotsApp Gateway API",
+    "_postman_id": "botsapp-v2-collection",
+    "description": "Postman Collection for BotsApp Enterprise WhatsApp Gateway",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Gateway Health & Status",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "http://localhost:3001/api/status" }
+      }
+    },
+    {
+      "name": "Get QR Code",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "http://localhost:3001/api/qr" }
+      }
+    },
+    {
+      "name": "Send Text Message",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"phone\": \"233241234567\",\n  \"message\": \"Hello from BotsApp Gateway! 🚀\",\n  \"priority\": \"normal\"\n}"
+        },
+        "url": { "raw": "http://localhost:3001/api/send" }
+      }
+    },
+    {
+      "name": "Send Media Message",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"phone\": \"233241234567\",\n  \"mediaUrl\": \"https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800\",\n  \"caption\": \"BotsApp Rich Media Attachment\"\n}"
+        },
+        "url": { "raw": "http://localhost:3001/api/messages/media" }
+      }
+    },
+    {
+      "name": "Check WhatsApp Registration",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"phone\": \"0241234567\"\n}"
+        },
+        "url": { "raw": "http://localhost:3001/api/check-number" }
+      }
+    },
+    {
+      "name": "Check Message Delivery Status",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"phone\": \"0241234567\",\n  \"message_id\": \"true_233241234567@c.us_...\"\n}"
+        },
+        "url": { "raw": "http://localhost:3001/api/message-status" }
+      }
+    },
+    {
+      "name": "Reset Session",
+      "request": {
+        "method": "POST",
+        "url": { "raw": "http://localhost:3001/api/reset" }
+      }
+    }
+  ]
+}

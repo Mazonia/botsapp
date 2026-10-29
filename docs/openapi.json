@@ -1,0 +1,140 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "BotsApp Gateway API",
+    "version": "2.0.0",
+    "description": "Enterprise Standalone WhatsApp Gateway, API Service & Management Platform"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3001",
+      "description": "Local Instance"
+    }
+  ],
+  "paths": {
+    "/api/status": {
+      "get": {
+        "summary": "Get Gateway & Device Health",
+        "description": "Returns connection status, queue metrics, daily send count, and delay profile.",
+        "responses": {
+          "200": { "description": "Status response" }
+        }
+      }
+    },
+    "/api/qr": {
+      "get": {
+        "summary": "Get Latest QR Code Data URL",
+        "responses": {
+          "200": { "description": "QR Code Data URL" }
+        }
+      }
+    },
+    "/api/send": {
+      "post": {
+        "summary": "Send Text Message",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["phone", "message"],
+                "properties": {
+                  "phone": { "type": "string", "example": "233241234567" },
+                  "message": { "type": "string", "example": "Hello from BotsApp!" },
+                  "priority": { "type": "string", "enum": ["normal", "high"], "default": "normal" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Message queued/sent" },
+          "400": { "description": "Missing parameters" },
+          "429": { "description": "Daily limit reached" },
+          "503": { "description": "Client not authenticated" }
+        }
+      }
+    },
+    "/api/messages/media": {
+      "post": {
+        "summary": "Send Rich Media (Image, Audio, Video, Document)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["phone"],
+                "properties": {
+                  "phone": { "type": "string" },
+                  "file": { "type": "string", "format": "binary" },
+                  "caption": { "type": "string" },
+                  "isVoice": { "type": "boolean" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Media sent" }
+        }
+      }
+    },
+    "/api/messages/poll": {
+      "post": {
+        "summary": "Send Interactive WhatsApp Poll",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["phone", "title", "options"],
+                "properties": {
+                  "phone": { "type": "string" },
+                  "title": { "type": "string" },
+                  "options": { "type": "array", "items": { "type": "string" } },
+                  "allowMultiple": { "type": "boolean" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Poll created and sent" }
+        }
+      }
+    },
+    "/api/check-number": {
+      "post": {
+        "summary": "Check if Phone Number is Registered on WhatsApp",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["phone"],
+                "properties": {
+                  "phone": { "type": "string", "example": "0241234567" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Validation result" }
+        }
+      }
+    },
+    "/api/reset": {
+      "post": {
+        "summary": "Reset Session & Purge Tokens",
+        "responses": {
+          "200": { "description": "Reset initiated" }
+        }
+      }
+    }
+  }
+}
