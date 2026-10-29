@@ -48,6 +48,11 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(express.static(path.join(__dirname, '../public')));
 app.use('/uploads', express.static(config.UPLOADS_DIR));
 
+// AI / LLM discovery endpoint
+app.get('/llms.txt', (req, res) => {
+    res.type('text/plain').sendFile(path.join(__dirname, '../llms.txt'));
+});
+
 // API Authentication & Routes
 app.use('/api', authMiddleware, apiRoutes);
 

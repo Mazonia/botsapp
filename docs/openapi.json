@@ -83,6 +83,21 @@
         }
       }
     },
+    "/api/messages/search": {
+      "get": {
+        "summary": "Search WhatsApp Messages",
+        "description": "Performs full-text search across WhatsApp messages in personal and group chats.",
+        "parameters": [
+          { "name": "query", "in": "query", "required": true, "schema": { "type": "string" }, "description": "Search term or phrase" },
+          { "name": "chatId", "in": "query", "required": false, "schema": { "type": "string" }, "description": "Optional chat JID to restrict search to a single conversation" },
+          { "name": "limit", "in": "query", "required": false, "schema": { "type": "integer", "default": 30 } }
+        ],
+        "responses": {
+          "200": { "description": "List of matching messages" },
+          "400": { "description": "Missing query parameter" }
+        }
+      }
+    },
     "/api/messages/poll": {
       "post": {
         "summary": "Send Interactive WhatsApp Poll",

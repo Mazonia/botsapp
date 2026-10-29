@@ -1,0 +1,80 @@
+# BotsApp - Enterprise Standalone WhatsApp Gateway
+
+> Standalone, self-hosted WhatsApp Web REST API gateway, Anti-Ban 2.0 pacing queue, multi-format media delivery, CSV bulk broadcaster, and keyword auto-responder microservice.
+
+## Project Overview
+- **Name:** BotsApp
+- **Repository:** https://github.com/Mazonia/botsapp
+- **License:** MIT
+- **Runtime:** Node.js (v18+)
+- **Core Engine:** Puppeteer + whatsapp-web.js (headless Chromium automation with LocalAuth session persistence)
+- **Primary Use Cases:** E-commerce notifications, LMS student reminders, CRM messaging, OTP alerts, customer support live chat, bulk campaigns without per-conversation fees.
+
+## Key Capabilities
+- **Dual Identifier Addressing:** Native support for both traditional international E.164 phone numbers (e.g. `+23324XXXXXXX`) and modern WhatsApp username handles (e.g. `@johndoe`).
+- **Anti-Ban 2.0 Protection:** Serialized FIFO send queue with human typing delays, progressive session warmup profiles, and daily send limits.
+- **Multi-Format Messaging:** Formatted markdown text, images, videos, audio/voice notes (PTT), documents/PDFs, interactive polls, GPS location pins, and contact cards.
+- **Message Search and Retrieval:** Full-text message search across all conversations and inside specific chats.
+- **Keyword Auto-Responder:** Rule-based chatbot with cooldown delays and dynamic tag replacement (`{name}`, `{time}`, `{date}`).
+- **Bulk Broadcaster:** Broadcast engine with drag-and-drop CSV parsing, column auto-detection, and pacing sliders.
+- **HMAC Signed Webhooks:** Dispatches inbound messages, ACK status updates (sent, delivered, read), and session lifecycle events with SHA-256 signatures.
+
+## Quick API Reference
+
+### Health and Status
+- `GET /api/status` - Live gateway status, session health, QR code base64 string, and queue metrics.
+
+### Sending Messages
+- `POST /api/send` - Send queued text message to phone number or @username.
+  ```json
+  {
+    "phone": "233241234567",
+    "message": "Hello from BotsApp!",
+    "priority": "normal"
+  }
+  ```
+- `POST /api/messages/media` - Send image, video, audio, or document (multipart form or JSON URL).
+- `POST /api/messages/poll` - Send interactive poll with single or multiple choice.
+- `POST /api/messages/location` - Send GPS location pin.
+
+### Search and Verification
+- `GET /api/messages/search?query=invoice` - Full-text search across all WhatsApp messages.
+- `POST /api/check-number` - Verify if a phone number or @username is registered on WhatsApp.
+- `POST /api/contacts/validate-bulk` - Validate a list of numbers or @usernames.
+
+### Webhooks and Auto-Responder
+- `GET /api/webhooks` - List webhook destinations.
+- `POST /api/webhooks` - Register new webhook URL.
+- `GET /api/autoresponder` - List keyword chatbot rules.
+- `POST /api/autoresponder/test` - Test rule match against sample text.
+
+## Integration Code Examples
+
+### cURL
+```bash
+curl -X POST http://localhost:3001/api/send \
+  -H "Content-Type: application/json" \
+  -H "X-Api-Key: your_optional_secret_key" \
+  -d '{"phone": "233241234567", "message": "Class starts in 30 minutes! 🚀"}'
+```
+
+### Node.js / JavaScript
+```javascript
+const response = await fetch('http://localhost:3001/api/send', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    phone: '@username_or_number',
+    message: 'Hello from Node.js!',
+    priority: 'high'
+  })
+});
+const data = await response.json();
+console.log(data);
+```
+
+### PHP / Laravel
+```php
+$client = new \BotsApp\BotsAppClient('http://localhost:3001', 'optional_api_key');
+$result = $client->send('233241234567', 'Your OTP is: *948271*', 'high');
+```

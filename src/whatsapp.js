@@ -691,6 +691,39 @@ class WhatsAppGateway {
         }));
     }
 
+    async searchMessages(query, options = {}) {
+        if (!this.isReady) throw new Error('WhatsApp client is not connected.');
+        const cleanQuery = String(query || '').trim();
+        if (!cleanQuery) return [];
+
+        const searchOpts = {
+            limit: options.limit ? parseInt(options.limit, 10) : 30,
+            page: options.page ? parseInt(options.page, 10) : 1
+        };
+
+        if (options.chatId) {
+            searchOpts.chatId = options.chatId;
+        }
+
+        try {
+            const msgs = await this.client.searchMessages(cleanQuery, searchOpts);
+            return (msgs || []).map(m => ({
+                id: m.id?._serialized || m.id?.id,
+                from: m.from,
+                to: m.to,
+                body: m.body || '',
+                type: m.type,
+                timestamp: m.timestamp,
+                fromMe: Boolean(m.fromMe),
+                hasMedia: Boolean(m.hasMedia),
+                chatId: m.fromMe ? m.to : m.from
+            }));
+        } catch (err) {
+            logger.warn('searchMessages error: ' + err.message);
+            return [];
+        }
+    }
+
     async markChatRead(chatId) {
         if (!this.isReady) throw new Error('WhatsApp client is not connected.');
         const chat = await this.client.getChatById(chatId);

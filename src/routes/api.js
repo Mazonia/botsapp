@@ -293,6 +293,30 @@ router.post('/messages/delete', async (req, res) => {
 // 3. CHATS & CONVERSATIONS
 // ====================================================================
 
+// GET /api/messages/search - Search across messages globally or in a specific chat
+router.get('/messages/search', async (req, res) => {
+    const query = req.query.query || req.query.q;
+    if (!query) {
+        return res.status(400).json({ success: false, message: 'Query parameter is required.' });
+    }
+
+    try {
+        const results = await whatsapp.searchMessages(query, {
+            chatId: req.query.chatId,
+            limit: req.query.limit,
+            page: req.query.page
+        });
+        res.json({
+            success: true,
+            query,
+            count: results.length,
+            messages: results
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
 // GET /api/chats - List conversations
 router.get('/chats', async (req, res) => {
     try {

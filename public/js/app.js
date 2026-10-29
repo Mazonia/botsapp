@@ -7,6 +7,15 @@ let uploadedCampContacts = [];
 let lastValidationResults = [];
 let selectedChatAttachment = null;
 
+// Search & Filter State
+let rawChatsList = [];
+let currentChatFilter = 'all'; // 'all', 'unread', 'direct', 'group'
+let chatSearchQuery = '';
+let inChatSearchResults = [];
+let currentInChatMatchIndex = -1;
+let rawCampaignsList = [];
+let rawRulesList = [];
+
 // ===================================================================
 // 1. THEME MANAGEMENT (LIGHT / DARK)
 // ===================================================================
@@ -582,34 +591,67 @@ async function fetchCampaigns() {
     try {
         const res = await fetch('/api/campaigns');
         const data = await res.json();
-        if (!data.campaigns || data.campaigns.length === 0) {
+        rawCampaignsList = data.campaigns || [];
+        const badge = document.getElementById('campCountBadge');
+        if (badge) badge.textContent = rawCampaignsList.length;
+
+        if (rawCampaignsList.length === 0) {
             tbody.innerHTML = '<tr><td colspan="6" class="p-6 text-center text-slate-400">No campaigns found. Click "New Campaign" to create one.</td></tr>';
             return;
         }
 
-        tbody.innerHTML = data.campaigns.map(c => `
-            <tr class="hover:bg-slate-100/50 dark:hover:bg-white/[0.02] transition">
-                <td class="p-4 font-bold text-slate-900 dark:text-white">${escapeHtml(c.name)}</td>
-                <td class="p-4">
-                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                        c.status === 'completed' ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' :
-                        c.status === 'running' ? 'bg-blue-500/20 text-blue-600 dark:text-blue-400 animate-pulse' :
-                        c.status === 'paused' ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
-                    }">${c.status.toUpperCase()}</span>
-                </td>
-                <td class="p-4">${c.stats.sent} / ${c.stats.total}</td>
-                <td class="p-4">${c.intervalSeconds}s</td>
-                <td class="p-4 text-slate-500">${new Date(c.createdAt).toLocaleDateString()}</td>
-                <td class="p-4 text-right space-x-2">
-                    ${c.status === 'draft' || c.status === 'paused' ? `<button onclick="startCampaign('${c.id}')" class="text-emerald-600 dark:text-emerald-400 font-bold hover:underline">Start</button>` : ''}
-                    ${c.status === 'running' ? `<button onclick="pauseCampaign('${c.id}')" class="text-amber-600 dark:text-amber-400 font-bold hover:underline">Pause</button>` : ''}
-                    <button onclick="deleteCampaign('${c.id}')" class="text-rose-500 hover:underline">Delete</button>
-                </td>
-            </tr>
-        `).join('');
+        renderCampaignRows(rawCampaignsList);
     } catch (e) {
         tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-rose-500">${e.message}</td></tr>`;
     }
+}
+
+function filterCampaigns(query) {
+    const q = String(query || '').toLowerCase().trim();
+    const tbody = document.getElementById('campaignsTableBody');
+    if (!tbody) return;
+
+    const filtered = rawCampaignsList.filter(c => 
+        String(c.name || '').toLowerCase().includes(q) ||
+        String(c.status || '').toLowerCase().includes(q) ||
+        String(c.template || '').toLowerCase().includes(q)
+    );
+
+    const badge = document.getElementById('campCountBadge');
+    if (badge) badge.textContent = filtered.length;
+
+    if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="p-6 text-center text-slate-400">No campaigns match your filter.</td></tr>';
+        return;
+    }
+
+    renderCampaignRows(filtered);
+}
+
+function renderCampaignRows(campaigns) {
+    const tbody = document.getElementById('campaignsTableBody');
+    if (!tbody) return;
+
+    tbody.innerHTML = campaigns.map(c => `
+        <tr class="hover:bg-slate-100/50 dark:hover:bg-white/[0.02] transition">
+            <td class="p-4 font-bold text-slate-900 dark:text-white">${escapeHtml(c.name)}</td>
+            <td class="p-4">
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                    c.status === 'completed' ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' :
+                    c.status === 'running' ? 'bg-blue-500/20 text-blue-600 dark:text-blue-400 animate-pulse' :
+                    c.status === 'paused' ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
+                }">${c.status.toUpperCase()}</span>
+            </td>
+            <td class="p-4">${c.stats.sent} / ${c.stats.total}</td>
+            <td class="p-4">${c.intervalSeconds}s</td>
+            <td class="p-4 text-slate-500">${new Date(c.createdAt).toLocaleDateString()}</td>
+            <td class="p-4 text-right space-x-2">
+                ${c.status === 'draft' || c.status === 'paused' ? `<button onclick="startCampaign('${c.id}')" class="text-emerald-600 dark:text-emerald-400 font-bold hover:underline">Start</button>` : ''}
+                ${c.status === 'running' ? `<button onclick="pauseCampaign('${c.id}')" class="text-amber-600 dark:text-amber-400 font-bold hover:underline">Pause</button>` : ''}
+                <button onclick="deleteCampaign('${c.id}')" class="text-rose-500 hover:underline">Delete</button>
+            </td>
+        </tr>
+    `).join('');
 }
 
 async function startCampaign(id) { await fetch(`/api/campaigns/${id}/start`, { method: 'POST' }); fetchCampaigns(); }
@@ -739,34 +781,68 @@ async function fetchRules() {
     try {
         const res = await fetch('/api/autoresponder');
         const data = await res.json();
-        if (!data.rules || data.rules.length === 0) {
+        rawRulesList = data.rules || [];
+        const badge = document.getElementById('rulesCountBadge');
+        if (badge) badge.textContent = rawRulesList.length;
+
+        if (rawRulesList.length === 0) {
             grid.innerHTML = '<div class="col-span-2 text-center text-slate-400 py-8">No auto-responder rules configured.</div>';
             return;
         }
 
-        grid.innerHTML = data.rules.map(r => `
-            <div class="glass-panel p-5 rounded-3xl space-y-3">
-                <div class="flex items-center justify-between">
-                    <h4 class="text-xs font-bold text-slate-900 dark:text-white">${escapeHtml(r.name)}</h4>
-                    <button onclick="toggleRule('${r.id}')" data-tooltip="Click to toggle rule on/off" class="px-2 py-0.5 rounded-full text-[10px] font-bold ${r.enabled ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' : 'bg-slate-200 dark:bg-slate-800 text-slate-500'}">
-                        ${r.enabled ? 'Active' : 'Disabled'}
-                    </button>
-                </div>
-                <div class="text-[11px] text-slate-500 dark:text-slate-400">
-                    Triggers on: <span class="font-bold text-amber-600 dark:text-amber-400">${escapeHtml(r.keywords.join(', '))}</span> (${r.triggerType})
-                </div>
-                <div class="p-3 bg-slate-100 dark:bg-slate-950/60 rounded-xl text-xs text-slate-700 dark:text-slate-300 whitespace-pre-wrap font-mono">
-                    ${escapeHtml(r.responseText)}
-                </div>
-                <div class="flex items-center justify-between pt-1 text-[11px]">
-                    <span class="text-slate-400">Cooldown: ${r.cooldownSeconds || 60}s</span>
-                    <button onclick="deleteRule('${r.id}')" class="text-rose-500 hover:underline">Delete Rule</button>
-                </div>
-            </div>
-        `).join('');
+        renderRuleCards(rawRulesList);
     } catch (e) {
         grid.innerHTML = `<div class="col-span-2 text-center text-rose-500 py-8">${e.message}</div>`;
     }
+}
+
+function filterRules(query) {
+    const q = String(query || '').toLowerCase().trim();
+    const grid = document.getElementById('rulesListGrid');
+    if (!grid) return;
+
+    const filtered = rawRulesList.filter(r => 
+        String(r.name || '').toLowerCase().includes(q) ||
+        String(r.triggerType || '').toLowerCase().includes(q) ||
+        (Array.isArray(r.keywords) ? r.keywords.join(', ') : '').toLowerCase().includes(q) ||
+        String(r.responseText || '').toLowerCase().includes(q)
+    );
+
+    const badge = document.getElementById('rulesCountBadge');
+    if (badge) badge.textContent = filtered.length;
+
+    if (filtered.length === 0) {
+        grid.innerHTML = '<div class="col-span-2 text-center text-slate-400 py-8">No auto-responder rules match your search.</div>';
+        return;
+    }
+
+    renderRuleCards(filtered);
+}
+
+function renderRuleCards(rules) {
+    const grid = document.getElementById('rulesListGrid');
+    if (!grid) return;
+
+    grid.innerHTML = rules.map(r => `
+        <div class="glass-panel p-5 rounded-3xl space-y-3">
+            <div class="flex items-center justify-between">
+                <h4 class="text-xs font-bold text-slate-900 dark:text-white">${escapeHtml(r.name)}</h4>
+                <button onclick="toggleRule('${r.id}')" data-tooltip="Click to toggle rule on/off" class="px-2 py-0.5 rounded-full text-[10px] font-bold ${r.enabled ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' : 'bg-slate-200 dark:bg-slate-800 text-slate-500'}">
+                    ${r.enabled ? 'Active' : 'Disabled'}
+                </button>
+            </div>
+            <div class="text-[11px] text-slate-500 dark:text-slate-400">
+                Triggers on: <span class="font-bold text-amber-600 dark:text-amber-400">${escapeHtml(r.keywords.join(', '))}</span> (${r.triggerType})
+            </div>
+            <div class="p-3 bg-slate-100 dark:bg-slate-950/60 rounded-xl text-xs text-slate-700 dark:text-slate-300 whitespace-pre-wrap font-mono">
+                ${escapeHtml(r.responseText)}
+            </div>
+            <div class="flex items-center justify-between pt-1 text-[11px]">
+                <span class="text-slate-400">Cooldown: ${r.cooldownSeconds || 60}s</span>
+                <button onclick="deleteRule('${r.id}')" class="text-rose-500 hover:underline">Delete Rule</button>
+            </div>
+        </div>
+    `).join('');
 }
 
 async function runTriggerSimulation() {
@@ -845,49 +921,115 @@ async function deleteRule(id) {
 }
 
 // ===================================================================
-// 9. LIVE CHAT WITH DIRECT ATTACHMENTS
+// 9. LIVE CHAT & CONVERSATION SEARCH / FILTERS
 // ===================================================================
 async function refreshChats() {
     const container = document.getElementById('chatListContainer');
     try {
         const res = await fetch('/api/chats');
         const data = await res.json();
-        if (!data.chats || data.chats.length === 0) {
-            container.innerHTML = '<div class="p-4 text-xs text-center text-slate-400">No active chats found.</div>';
-            return;
-        }
-
-        container.innerHTML = data.chats.map(chat => `
-            <div onclick="selectChat('${chat.id}', '${escapeHtml(chat.name)}')" class="p-3 hover:bg-slate-100 dark:hover:bg-white/5 cursor-pointer transition flex items-center gap-3 ${activeChatId === chat.id ? 'bg-slate-200/80 dark:bg-white/10' : ''}">
-                <div class="w-10 h-10 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold text-sm shrink-0">
-                    ${chat.name ? chat.name.charAt(0).toUpperCase() : '?'}
-                </div>
-                <div class="flex-1 min-w-0">
-                    <div class="flex items-center justify-between">
-                        <h4 class="text-xs font-bold text-slate-900 dark:text-white truncate">${escapeHtml(chat.name)}</h4>
-                        <span class="text-[10px] text-slate-400">${formatTime(chat.timestamp)}</span>
-                    </div>
-                    <p class="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">${escapeHtml(chat.lastMessage?.body || 'Attachment')}</p>
-                </div>
-                ${chat.unreadCount > 0 ? `<span class="px-2 py-0.5 rounded-full bg-emerald-500 text-white text-[10px] font-bold">${chat.unreadCount}</span>` : ''}
-            </div>
-        `).join('');
+        rawChatsList = data.chats || [];
+        renderFilteredChats();
     } catch (e) {
         container.innerHTML = '<div class="p-4 text-xs text-center text-rose-500">Failed to load chats</div>';
     }
 }
 
+function handleChatSearch(val) {
+    chatSearchQuery = String(val || '').toLowerCase().trim();
+    renderFilteredChats();
+}
+
+function setChatFilter(filter) {
+    currentChatFilter = filter;
+    ['all', 'unread', 'direct', 'group'].forEach(f => {
+        const btn = document.getElementById(`chat-filter-${f}`);
+        if (!btn) return;
+        if (f === filter) {
+            btn.className = 'chat-chip px-2.5 py-0.5 rounded-full font-bold bg-emerald-600 text-white';
+        } else {
+            btn.className = 'chat-chip px-2.5 py-0.5 rounded-full font-medium text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-slate-200/80 dark:bg-white/5';
+        }
+    });
+    renderFilteredChats();
+}
+
+function renderFilteredChats() {
+    const container = document.getElementById('chatListContainer');
+    if (!container) return;
+
+    if (!rawChatsList || rawChatsList.length === 0) {
+        container.innerHTML = '<div class="p-4 text-xs text-center text-slate-400">No active chats found.</div>';
+        return;
+    }
+
+    let filtered = rawChatsList.slice();
+
+    // 1. Filter by category
+    if (currentChatFilter === 'unread') {
+        filtered = filtered.filter(c => c.unreadCount > 0);
+    } else if (currentChatFilter === 'direct') {
+        filtered = filtered.filter(c => !c.isGroup);
+    } else if (currentChatFilter === 'group') {
+        filtered = filtered.filter(c => c.isGroup);
+    }
+
+    // 2. Filter by search query
+    if (chatSearchQuery) {
+        filtered = filtered.filter(c => {
+            const name = String(c.name || '').toLowerCase();
+            const id = String(c.id || '').toLowerCase();
+            const lastMsg = String(c.lastMessage?.body || '').toLowerCase();
+            return name.includes(chatSearchQuery) || id.includes(chatSearchQuery) || lastMsg.includes(chatSearchQuery);
+        });
+    }
+
+    if (filtered.length === 0) {
+        container.innerHTML = `
+            <div class="p-6 text-xs text-center text-slate-400 space-y-2">
+                <i data-lucide="filter" class="w-5 h-5 mx-auto text-slate-400"></i>
+                <p>No chats match the search or filter.</p>
+                ${chatSearchQuery ? `<p class="text-[10px] text-slate-500">Query: "${escapeHtml(chatSearchQuery)}"</p>` : ''}
+                <button onclick="setChatFilter('all'); document.getElementById('chatSearchInput').value=''; handleChatSearch('');" class="text-emerald-500 text-xs font-bold hover:underline">Reset filters</button>
+            </div>
+        `;
+        if (window.lucide) lucide.createIcons();
+        return;
+    }
+
+    container.innerHTML = filtered.map(chat => `
+        <div onclick="selectChat('${chat.id}', '${escapeHtml(chat.name)}')" class="p-3 hover:bg-slate-100 dark:hover:bg-white/5 cursor-pointer transition flex items-center gap-3 ${activeChatId === chat.id ? 'bg-slate-200/80 dark:bg-white/10' : ''}">
+            <div class="w-10 h-10 rounded-full ${chat.isGroup ? 'bg-purple-500/20 text-purple-600 dark:text-purple-400' : 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'} flex items-center justify-center font-bold text-sm shrink-0">
+                ${chat.isGroup ? '👥' : (chat.name ? chat.name.charAt(0).toUpperCase() : '?')}
+            </div>
+            <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between">
+                    <h4 class="text-xs font-bold text-slate-900 dark:text-white truncate">${highlightMatch(escapeHtml(chat.name), chatSearchQuery)}</h4>
+                    <span class="text-[10px] text-slate-400 shrink-0 ml-1">${formatTime(chat.timestamp)}</span>
+                </div>
+                <p class="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">${highlightMatch(escapeHtml(chat.lastMessage?.body || (chat.isGroup ? 'Group conversation' : 'No messages')), chatSearchQuery)}</p>
+            </div>
+            ${chat.unreadCount > 0 ? `<span class="px-2 py-0.5 rounded-full bg-emerald-500 text-white text-[10px] font-bold shrink-0">${chat.unreadCount}</span>` : ''}
+        </div>
+    `).join('');
+
+    if (window.lucide) lucide.createIcons();
+}
+
 async function selectChat(id, name) {
     activeChatId = id;
+    closeInChatSearch();
     document.getElementById('activeChatTitle').textContent = name;
     document.getElementById('activeChatSubtitle').textContent = id;
     document.getElementById('activeChatAvatar').textContent = name.charAt(0).toUpperCase();
+
+    renderFilteredChats(); // Refresh highlight on active chat item
 
     const thread = document.getElementById('chatThread');
     thread.innerHTML = '<div class="m-auto text-xs text-slate-400">Loading messages...</div>';
 
     try {
-        const res = await fetch(`/api/chats/${encodeURIComponent(id)}/messages?limit=40`);
+        const res = await fetch(`/api/chats/${encodeURIComponent(id)}/messages?limit=50`);
         const data = await res.json();
         thread.innerHTML = '';
 
@@ -901,6 +1043,179 @@ async function selectChat(id, name) {
     } catch (e) {
         thread.innerHTML = `<div class="m-auto text-xs text-rose-500">Failed to load: ${e.message}</div>`;
     }
+}
+
+// -------------------------------------------------------------------
+// IN-CHAT MESSAGE SEARCH
+// -------------------------------------------------------------------
+function toggleInChatSearch() {
+    const bar = document.getElementById('inChatSearchWrapper');
+    if (bar.classList.contains('hidden')) {
+        bar.classList.remove('hidden');
+        const input = document.getElementById('inChatSearchInput');
+        input.focus();
+        if (input.value) searchInActiveChat(input.value);
+    } else {
+        closeInChatSearch();
+    }
+}
+
+function closeInChatSearch() {
+    const bar = document.getElementById('inChatSearchWrapper');
+    if (bar) bar.classList.add('hidden');
+    const input = document.getElementById('inChatSearchInput');
+    if (input) input.value = '';
+    const counter = document.getElementById('inChatSearchCount');
+    if (counter) counter.classList.add('hidden');
+    clearInChatHighlights();
+}
+
+function clearInChatHighlights() {
+    inChatSearchResults = [];
+    currentInChatMatchIndex = -1;
+    const thread = document.getElementById('chatThread');
+    if (!thread) return;
+    const marks = thread.querySelectorAll('mark.chat-search-highlight');
+    marks.forEach(mark => {
+        const parent = mark.parentNode;
+        if (parent) {
+            parent.replaceChild(document.createTextNode(mark.textContent), mark);
+            parent.normalize();
+        }
+    });
+}
+
+function searchInActiveChat(query) {
+    clearInChatHighlights();
+    const clean = String(query || '').trim();
+    const counter = document.getElementById('inChatSearchCount');
+    if (!clean) {
+        if (counter) counter.classList.add('hidden');
+        return;
+    }
+
+    const thread = document.getElementById('chatThread');
+    if (!thread) return;
+
+    const messageBodies = thread.querySelectorAll('.whitespace-pre-wrap');
+    const lowerQuery = clean.toLowerCase();
+
+    messageBodies.forEach(bodyElem => {
+        const text = bodyElem.textContent;
+        const lowerText = text.toLowerCase();
+        if (lowerText.includes(lowerQuery)) {
+            inChatSearchResults.push(bodyElem);
+            const regex = new RegExp(`(${escapeRegex(clean)})`, 'gi');
+            bodyElem.innerHTML = escapeHtml(text).replace(regex, '<mark class="chat-search-highlight bg-amber-400 text-slate-900 px-1 rounded font-bold shadow-sm">$1</mark>');
+        }
+    });
+
+    if (inChatSearchResults.length > 0) {
+        currentInChatMatchIndex = 0;
+        inChatSearchResults[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+        if (counter) {
+            counter.textContent = `1/${inChatSearchResults.length}`;
+            counter.classList.remove('hidden');
+        }
+    } else {
+        if (counter) {
+            counter.textContent = '0/0';
+            counter.classList.remove('hidden');
+        }
+    }
+}
+
+function navigateChatSearch(dir) {
+    if (inChatSearchResults.length === 0) return;
+    currentInChatMatchIndex = (currentInChatMatchIndex + dir + inChatSearchResults.length) % inChatSearchResults.length;
+    inChatSearchResults[currentInChatMatchIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const counter = document.getElementById('inChatSearchCount');
+    if (counter) {
+        counter.textContent = `${currentInChatMatchIndex + 1}/${inChatSearchResults.length}`;
+    }
+}
+
+// -------------------------------------------------------------------
+// GLOBAL WHATSAPP MESSAGE SEARCH MODAL
+// -------------------------------------------------------------------
+function openGlobalMsgSearchModal() {
+    const modal = document.getElementById('searchModal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        document.getElementById('globalMsgSearchInput').focus();
+    }
+}
+
+function closeGlobalMsgSearchModal() {
+    const modal = document.getElementById('searchModal');
+    if (modal) modal.classList.add('hidden');
+}
+
+async function handleGlobalMsgSearch(e) {
+    e.preventDefault();
+    const query = document.getElementById('globalMsgSearchInput').value.trim();
+    const resultsContainer = document.getElementById('globalSearchResults');
+    if (!query) return;
+
+    resultsContainer.innerHTML = '<div class="p-8 text-center text-xs text-slate-400 flex items-center justify-center gap-2"><div class="w-4 h-4 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div> Searching messages across WhatsApp...</div>';
+
+    try {
+        const res = await fetch(`/api/messages/search?query=${encodeURIComponent(query)}&limit=40`);
+        const data = await res.json();
+
+        if (!data.success || !data.messages || data.messages.length === 0) {
+            resultsContainer.innerHTML = `<div class="p-8 text-center text-xs text-slate-400">No messages found matching "${escapeHtml(query)}".</div>`;
+            return;
+        }
+
+        resultsContainer.innerHTML = `
+            <div class="text-[11px] text-slate-500 dark:text-slate-400 pb-2 px-1">Found <b>${data.messages.length}</b> messages matching "${escapeHtml(query)}":</div>
+            <div class="space-y-2">
+                ${data.messages.map(m => {
+                    const recipientOrSender = m.fromMe ? (m.to || 'Sent') : (m.from || 'Received');
+                    const snippet = highlightMatch(escapeHtml(m.body || '[Media Attachment]'), query);
+                    const chatId = m.chatId || (m.fromMe ? m.to : m.from);
+                    return `
+                        <div class="p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-2xl flex items-center justify-between gap-3 hover:border-purple-500/50 transition">
+                            <div class="min-w-0 flex-1">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="text-xs font-bold text-slate-900 dark:text-white truncate">${escapeHtml(recipientOrSender)}</span>
+                                    <span class="text-[9px] px-1.5 py-0.5 rounded ${m.fromMe ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-blue-500/10 text-blue-600 dark:text-blue-400'} font-bold">
+                                        ${m.fromMe ? 'Outbound' : 'Inbound'}
+                                    </span>
+                                    <span class="text-[10px] text-slate-400 ml-auto shrink-0">${formatTime(m.timestamp)}</span>
+                                </div>
+                                <p class="text-xs text-slate-600 dark:text-slate-300 break-words line-clamp-2">${snippet}</p>
+                            </div>
+                            <button onclick="jumpToChatFromSearch('${chatId}')" class="px-3 py-1.5 bg-purple-600/10 hover:bg-purple-600 text-purple-600 hover:text-white dark:text-purple-300 rounded-xl text-xs font-bold transition shrink-0">
+                                Open Chat
+                            </button>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        `;
+    } catch (err) {
+        resultsContainer.innerHTML = `<div class="p-8 text-center text-xs text-rose-500">Search error: ${escapeHtml(err.message)}</div>`;
+    }
+}
+
+function jumpToChatFromSearch(chatId) {
+    closeGlobalMsgSearchModal();
+    switchTab('chat');
+    const existing = rawChatsList.find(c => c.id === chatId);
+    const chatName = existing ? existing.name : chatId;
+    selectChat(chatId, chatName);
+}
+
+function highlightMatch(text, query) {
+    if (!query) return text;
+    const regex = new RegExp(`(${escapeRegex(query)})`, 'gi');
+    return String(text).replace(regex, '<mark class="bg-amber-400/40 text-slate-900 dark:text-amber-200 px-0.5 rounded font-bold">$1</mark>');
+}
+
+function escapeRegex(string) {
+    return String(string).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function appendChatMessage(m) {

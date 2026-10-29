@@ -49,6 +49,11 @@ BotsApp solves the challenge of connecting applications, web platforms, and CRMs
   - Number validation tool with single checks and bulk CSV batch validation.
   - Rule-based keyword auto-responder chatbot with cooldown protection.
   - Real-time server log console powered by WebSockets.
+- **Full-Text Message Search and Filtering:**
+  - Real-time in-chat search highlighting matches with navigation arrows.
+  - Quick conversation filter chips: All, Unread, Direct 1-on-1, and Groups.
+  - Global message search modal across all WhatsApp personal and group messages (`GET /api/messages/search`).
+  - Real-time filter search for broadcast campaigns and auto-responder chatbot rules.
 - **Universal Webhooks Engine:**
   - Dispatches inbound messages, delivery receipts (sent, delivered, read/blue ticks), and session lifecycle events.
   - HMAC SHA-256 payload signing for request authenticity.
@@ -156,10 +161,27 @@ docker-compose up -d
 | `POST` | `/api/message-status` | Get live delivery and read status (ACK) |
 | `POST` | `/api/reset` | Clear session and generate fresh QR |
 | `GET` | `/api/chats` | List active conversations |
+| `GET` | `/api/messages/search` | Search text across all messages |
 | `GET` | `/api/campaigns` | List broadcast campaigns |
 | `GET` | `/api/webhooks` | List webhook endpoints |
 
 See [`OUTSOURCING.md`](./OUTSOURCING.md) for full developer documentation.
+
+---
+
+## Frequently Asked Questions (FAQ)
+
+### What makes BotsApp different from Meta Cloud API or Twilio?
+BotsApp connects directly through WhatsApp Web headless automation, meaning you do not pay recurring per-conversation fees, do not require Facebook Business verification approval, and maintain complete ownership and self-hosted privacy over your contact lists and chat logs.
+
+### How does BotsApp prevent WhatsApp accounts from getting banned?
+BotsApp features an intelligent Anti-Ban 2.0 system. Outgoing messages are queued into a serialized FIFO pipeline with humanized typing states (`chat.sendStateTyping()`), progressive session warmup delays, and configurable daily send limits (`WA_DAILY_LIMIT`) to protect your number.
+
+### Does BotsApp support WhatsApp usernames (@username)?
+Yes. BotsApp natively resolves both traditional international E.164 phone numbers and modern WhatsApp usernames across all endpoints, CSV broadcasts, and verification tools.
+
+### Can I search messages across all WhatsApp chats?
+Yes. The REST API exposes `GET /api/messages/search?query=...` for full-text querying across all received and sent messages, and the web dashboard includes in-chat search with match highlighting and navigation.
 
 ---
 
