@@ -13,6 +13,7 @@ BotsApp was created to decouple WhatsApp automation logic from the main monolith
 
 ### Core Capabilities
 - Unofficial WhatsApp Web Gateway via Puppeteer automation.
+- Dual identifier support: sends to both traditional phone numbers and WhatsApp @username handles.
 - Multi-format message delivery: text, images, videos, audio/voice notes, documents, location pins, and polls.
 - Intelligent Anti-Ban 2.0 queue with human typing delays and daily volume caps.
 - Broadcast campaign manager with drag-and-drop CSV upload and variable replacements.

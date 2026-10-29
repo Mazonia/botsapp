@@ -81,23 +81,26 @@ router.post('/pairing-code', async (req, res) => {
     }
 });
 
-// POST /api/check-number - Verify WhatsApp registration
-router.post('/check-number', async (req, res) => {
-    const { phone } = req.body;
-    if (!phone) {
-        return res.status(400).json({ success: false, exists: false, message: 'Phone parameter is required.' });
+// POST /api/check-number or /api/check-user - Verify WhatsApp registration (phone or @username)
+const handleCheckUser = async (req, res) => {
+    const target = req.body.phone || req.body.username || req.body.identifier || req.body.to;
+    if (!target) {
+        return res.status(400).json({ success: false, exists: false, message: 'Phone or username parameter is required.' });
     }
-    const result = await whatsapp.checkNumberRegistered(phone);
+    const result = await whatsapp.checkNumberRegistered(target);
     res.json(result);
-});
+};
+router.post('/check-number', handleCheckUser);
+router.post('/check-user', handleCheckUser);
 
 // POST /api/message-status - Check live ACK / delivery of a message
 router.post('/message-status', async (req, res) => {
-    const { phone, message_id } = req.body;
-    if (!phone) {
-        return res.status(400).json({ success: false, message: 'Phone parameter is required.' });
+    const target = req.body.phone || req.body.username || req.body.to;
+    const { message_id } = req.body;
+    if (!target) {
+        return res.status(400).json({ success: false, message: 'Phone or username parameter is required.' });
     }
-    const result = await whatsapp.getMessageStatus(phone, message_id);
+    const result = await whatsapp.getMessageStatus(target, message_id);
     res.json(result);
 });
 
@@ -116,14 +119,15 @@ router.get('/anti-ban-status', (req, res) => {
     });
 });
 
-// POST /api/send - Send text message (anti-ban queued)
+// POST /api/send - Send text message (anti-ban queued, supports phone or @username)
 router.post('/send', async (req, res) => {
-    const { phone, message, priority = 'normal', options = {} } = req.body;
+    const target = req.body.to || req.body.phone || req.body.username || req.body.recipient;
+    const { message, priority = 'normal', options = {} } = req.body;
 
-    if (!phone || !message) {
+    if (!target || !message) {
         return res.status(400).json({
             success: false,
-            message: 'Phone and message are required in request body.'
+            message: 'Recipient (phone or @username) and message are required in request body.'
         });
     }
 
@@ -137,8 +141,8 @@ router.post('/send', async (req, res) => {
     try {
         const result = await queue.enqueue({
             priority,
-            meta: { to: phone, messageSnippet: message.substring(0, 30) },
-            taskFn: () => whatsapp.sendTextMessage(phone, message, options)
+            meta: { to: target, messageSnippet: message.substring(0, 30) },
+            taskFn: () => whatsapp.sendTextMessage(target, message, options)
         });
 
         res.json({
@@ -147,7 +151,7 @@ router.post('/send', async (req, res) => {
             daily_limit: config.DAILY_SEND_LIMIT
         });
     } catch (err) {
-        logger.error('API', `Send error to ${phone}:`, err.message);
+        logger.error('API', `Send error to ${target}:`, err.message);
         res.status(500).json({
             success: false,
             message: 'Failed to send WhatsApp message: ' + err.message,
@@ -162,11 +166,12 @@ router.post('/send', async (req, res) => {
 
 // POST /api/messages/media - Send image, video, audio, voice note, or document
 router.post('/messages/media', upload.single('file'), async (req, res) => {
-    const { phone, mediaUrl, caption = '', isVoice = false, filename } = req.body;
+    const target = req.body.to || req.body.phone || req.body.username || req.body.recipient;
+    const { mediaUrl, caption = '', isVoice = false, filename } = req.body;
     const uploadedFile = req.file;
 
-    if (!phone) {
-        return res.status(400).json({ success: false, message: 'Phone parameter is required.' });
+    if (!target) {
+        return res.status(400).json({ success: false, message: 'Recipient (phone or @username) is required.' });
     }
 
     if (!uploadedFile && !mediaUrl) {
@@ -179,9 +184,9 @@ router.post('/messages/media', upload.single('file'), async (req, res) => {
 
         const result = await queue.enqueue({
             priority: 'normal',
-            meta: { to: phone, type: 'media' },
+            meta: { to: target, type: 'media' },
             taskFn: () => whatsapp.sendMediaMessage(
-                phone,
+                target,
                 mediaSource,
                 finalFilename,
                 uploadedFile ? uploadedFile.mimetype : null,
@@ -198,16 +203,17 @@ router.post('/messages/media', upload.single('file'), async (req, res) => {
 
 // POST /api/messages/location - Share location coordinates
 router.post('/messages/location', async (req, res) => {
-    const { phone, latitude, longitude, description = '' } = req.body;
-    if (!phone || !latitude || !longitude) {
-        return res.status(400).json({ success: false, message: 'phone, latitude and longitude are required.' });
+    const target = req.body.to || req.body.phone || req.body.username || req.body.recipient;
+    const { latitude, longitude, description = '' } = req.body;
+    if (!target || !latitude || !longitude) {
+        return res.status(400).json({ success: false, message: 'Recipient, latitude and longitude are required.' });
     }
 
     try {
         const result = await queue.enqueue({
             priority: 'normal',
-            meta: { to: phone, type: 'location' },
-            taskFn: () => whatsapp.sendLocationMessage(phone, latitude, longitude, description)
+            meta: { to: target, type: 'location' },
+            taskFn: () => whatsapp.sendLocationMessage(target, latitude, longitude, description)
         });
         res.json(result);
     } catch (err) {
@@ -217,16 +223,17 @@ router.post('/messages/location', async (req, res) => {
 
 // POST /api/messages/poll - Create interactive poll
 router.post('/messages/poll', async (req, res) => {
-    const { phone, title, options, allowMultiple = false } = req.body;
-    if (!phone || !title || !Array.isArray(options) || options.length < 2) {
-        return res.status(400).json({ success: false, message: 'phone, title and at least 2 options are required.' });
+    const target = req.body.to || req.body.phone || req.body.username || req.body.recipient;
+    const { title, options, allowMultiple = false } = req.body;
+    if (!target || !title || !Array.isArray(options) || options.length < 2) {
+        return res.status(400).json({ success: false, message: 'Recipient, title and at least 2 options are required.' });
     }
 
     try {
         const result = await queue.enqueue({
             priority: 'normal',
-            meta: { to: phone, type: 'poll' },
-            taskFn: () => whatsapp.sendPollMessage(phone, title, options, allowMultiple)
+            meta: { to: target, type: 'poll' },
+            taskFn: () => whatsapp.sendPollMessage(target, title, options, allowMultiple)
         });
         res.json(result);
     } catch (err) {
@@ -236,16 +243,17 @@ router.post('/messages/poll', async (req, res) => {
 
 // POST /api/messages/contact - Share contact card
 router.post('/messages/contact', async (req, res) => {
-    const { phone, contactPhone } = req.body;
-    if (!phone || !contactPhone) {
-        return res.status(400).json({ success: false, message: 'phone and contactPhone are required.' });
+    const target = req.body.to || req.body.phone || req.body.username || req.body.recipient;
+    const { contactPhone } = req.body;
+    if (!target || !contactPhone) {
+        return res.status(400).json({ success: false, message: 'Recipient and contactPhone are required.' });
     }
 
     try {
         const result = await queue.enqueue({
             priority: 'normal',
-            meta: { to: phone, type: 'contact' },
-            taskFn: () => whatsapp.sendContactMessage(phone, { phone: contactPhone })
+            meta: { to: target, type: 'contact' },
+            taskFn: () => whatsapp.sendContactMessage(target, { phone: contactPhone })
         });
         res.json(result);
     } catch (err) {

@@ -362,7 +362,19 @@ function setComposerFormat(fmt) {
 }
 
 function updatePreviewPhone(val) {
-    document.getElementById('previewRecipient').textContent = val ? '+' + val.replace(/\D/g, '') : '+233 XXXXXXXX';
+    if (!val) {
+        document.getElementById('previewRecipient').textContent = '+233 XXXXXXXX';
+        return;
+    }
+    const trimmed = String(val).trim();
+    if (trimmed.startsWith('@')) {
+        document.getElementById('previewRecipient').textContent = trimmed;
+    } else if (/[a-zA-Z]/.test(trimmed) && !trimmed.includes('@g.us')) {
+        document.getElementById('previewRecipient').textContent = '@' + trimmed;
+    } else {
+        const clean = trimmed.replace(/\D/g, '');
+        document.getElementById('previewRecipient').textContent = clean ? '+' + clean : trimmed;
+    }
 }
 
 function updatePreviewText(val) {
@@ -610,7 +622,7 @@ async function deleteCampaign(id) { if (confirm('Delete campaign?')) { await fet
 async function runSingleCheck() {
     const phone = document.getElementById('singleCheckInput').value;
     const resBox = document.getElementById('singleCheckResult');
-    if (!phone) return alert('Enter phone number');
+    if (!phone) return alert('Enter phone number or @username');
 
     resBox.textContent = 'Verifying WhatsApp registration...';
     resBox.className = 'p-3 rounded-xl text-xs bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300';
@@ -623,12 +635,13 @@ async function runSingleCheck() {
             body: JSON.stringify({ phone })
         });
         const data = await res.json();
+        const idLabel = data.type === 'username' ? 'Username' : 'Number';
         if (data.exists) {
             resBox.className = 'p-3 rounded-xl text-xs bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 font-bold';
-            resBox.textContent = `✓ ${phone} is REGISTERED on WhatsApp (${data.jid})`;
+            resBox.textContent = `✓ ${idLabel} ${data.identifier || phone} is REGISTERED on WhatsApp (${data.jid})`;
         } else {
             resBox.className = 'p-3 rounded-xl text-xs bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-500/20 font-bold';
-            resBox.textContent = `✗ ${phone} is NOT found on WhatsApp.`;
+            resBox.textContent = `✗ ${idLabel} ${phone} is NOT found on WhatsApp.`;
         }
     } catch (e) {
         resBox.textContent = 'Error: ' + e.message;
@@ -672,9 +685,9 @@ async function runBulkCheck() {
     const raw = document.getElementById('bulkCheckInput').value;
     const resBox = document.getElementById('bulkCheckResult');
     const numbers = raw.split(/[\n,;]+/).map(n => n.trim()).filter(Boolean);
-    if (numbers.length === 0) return alert('Please enter numbers');
+    if (numbers.length === 0) return alert('Please enter phone numbers or @usernames');
 
-    resBox.textContent = `Validating ${numbers.length} numbers...`;
+    resBox.textContent = `Validating ${numbers.length} contacts (phones / @usernames)...`;
     resBox.className = 'p-3 rounded-xl text-xs bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300';
     resBox.classList.remove('hidden');
 

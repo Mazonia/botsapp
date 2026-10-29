@@ -22,6 +22,10 @@ BotsApp solves the challenge of connecting applications, web platforms, and CRMs
 
 ## Key Features
 
+- **Phone Numbers and WhatsApp @Usernames Support:**
+  - Full support for traditional international E.164 phone numbers (e.g. `+233...`, `024...`).
+  - Native support for WhatsApp's modern username system (`@username` handles) across all API endpoints, broadcasting engine, CSV parser, and validation tools.
+  - Automatically resolves usernames via WhatsApp Web internal contact stores and page contexts.
 - **Multi-Format Messaging:**
   - Formatted text with markdown support (*bold*, _italic_, ~strike~, ```code```).
   - Rich media attachments: high-resolution images (JPEG, PNG, WebP), videos (MP4), audio, WhatsApp voice notes (PTT), and documents/PDFs.

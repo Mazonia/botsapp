@@ -28,7 +28,7 @@ class BotsAppClient
     /**
      * Send a standard text message (queued through anti-ban protection).
      *
-     * @param string $to Phone number (e.g. 024XXXXXXX or 233XXXXXXXX)
+     * @param string $to Phone number (e.g. 024XXXXXXX or 233XXXXXXXX) or WhatsApp username (e.g. @username)
      * @param string $message Text content (supports *bold*, _italic_, etc.)
      * @param string $priority 'normal' or 'high' (for OTPs/urgent alerts)
      * @return array{success: bool, message: string, message_id?: string, daily_count?: int, error?: string}
@@ -121,11 +121,19 @@ class BotsAppClient
     }
 
     /**
-     * Check if a phone number is registered on WhatsApp.
+     * Check if a phone number or @username is registered on WhatsApp.
      */
     public function checkNumber(string $phone): array
     {
         return $this->post('/api/check-number', ['phone' => $phone]);
+    }
+
+    /**
+     * Check if a phone number or @username is registered on WhatsApp.
+     */
+    public function checkUser(string $phoneOrUsername): array
+    {
+        return $this->post('/api/check-user', ['phone' => $phoneOrUsername]);
     }
 
     /**

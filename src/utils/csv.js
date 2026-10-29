@@ -2,6 +2,7 @@ const phoneUtils = require('./phone');
 
 /**
  * Robust CSV and delimited text parser.
+ * Supports phone numbers and WhatsApp @usernames.
  */
 function parseCsv(content) {
     if (!content || typeof content !== 'string') return [];
@@ -30,7 +31,7 @@ function parseCsv(content) {
 
     // Check if first row is a header
     const phoneHeaderIndex = firstRow.findIndex(h => 
-        ['phone', 'mobile', 'tel', 'whatsapp', 'number', 'telephone', 'contact', 'recipient'].includes(h)
+        ['phone', 'mobile', 'tel', 'whatsapp', 'number', 'telephone', 'contact', 'recipient', 'username', 'user', 'handle', '@username'].includes(h)
     );
     const nameHeaderIndex = firstRow.findIndex(h => 
         ['name', 'fullname', 'full_name', 'first_name', 'firstname', 'client', 'customer', 'learner'].includes(h)
@@ -54,7 +55,7 @@ function parseCsv(content) {
                 const val = (row[idx] || '').trim();
                 const lowerH = h.toLowerCase();
 
-                if (idx === phoneHeaderIndex || (!rawPhone && ['phone', 'mobile', 'tel', 'whatsapp', 'number'].includes(lowerH))) {
+                if (idx === phoneHeaderIndex || (!rawPhone && ['phone', 'mobile', 'tel', 'whatsapp', 'number', 'username', 'user', 'handle', '@username'].includes(lowerH))) {
                     rawPhone = val;
                 } else if (idx === nameHeaderIndex || (!name && ['name', 'full_name', 'first_name'].includes(lowerH))) {
                     name = val;
@@ -63,14 +64,14 @@ function parseCsv(content) {
                 }
             });
         } else {
-            // Default: first column with valid digits is phone, other is name
+            // Default: first column with valid digits or @username is phone/user, other is name
             const col0 = (row[0] || '').trim();
             const col1 = (row[1] || '').trim();
 
-            if (col0.replace(/\D/g, '').length >= 7) {
+            if (phoneUtils.isValidIdentifier(col0)) {
                 rawPhone = col0;
                 name = col1;
-            } else if (col1.replace(/\D/g, '').length >= 7) {
+            } else if (phoneUtils.isValidIdentifier(col1)) {
                 rawPhone = col1;
                 name = col0;
             } else {
@@ -79,11 +80,12 @@ function parseCsv(content) {
             }
         }
 
-        const cleanPhone = phoneUtils.normalizePhoneNumber(rawPhone);
-        if (cleanPhone && cleanPhone.length >= 7) {
+        const cleanIdentifier = phoneUtils.normalizeIdentifier(rawPhone);
+        if (cleanIdentifier && phoneUtils.isValidIdentifier(cleanIdentifier)) {
             results.push({
-                phone: cleanPhone,
+                phone: cleanIdentifier,
                 name: name || 'Valued Customer',
+                isUsername: phoneUtils.isUsername(cleanIdentifier),
                 customFields
             });
         }

@@ -239,14 +239,77 @@ class WhatsAppGateway {
         });
     }
 
-    async resolveTargetJid(phoneOrJid) {
-        const clean = phoneUtils.normalizePhoneNumber(phoneOrJid);
-        if (clean.endsWith('@g.us')) return clean;
+    async resolveTargetJid(recipient) {
+        if (!recipient) return '';
+        const raw = String(recipient).trim();
 
-        let targetJid = `${clean}@c.us`;
+        // If it's already a group or user JID
+        if (raw.endsWith('@g.us') || raw.endsWith('@c.us') || raw.endsWith('@s.whatsapp.net') || raw.endsWith('@lid')) {
+            return raw.replace('@s.whatsapp.net', '@c.us');
+        }
+
+        // WhatsApp username support (e.g. @username or alphanumeric handle)
+        if (phoneUtils.isUsername(raw)) {
+            const cleanUser = phoneUtils.normalizeUsername(raw);
+
+            // 1. Search in loaded contacts
+            try {
+                const contacts = await this.client.getContacts().catch(() => []);
+                const found = contacts.find(c => 
+                    (c.username && c.username.toLowerCase() === cleanUser) ||
+                    (c.id && c.id.user && c.id.user.toLowerCase() === cleanUser) ||
+                    (c.pushname && c.pushname.toLowerCase() === cleanUser)
+                );
+                if (found && found.id && found.id._serialized) {
+                    return found.id._serialized;
+                }
+            } catch (_) {}
+
+            // 2. Query WhatsApp Web internal Store in page context
+            if (this.client && this.client.pupPage) {
+                try {
+                    const resolvedWid = await this.client.pupPage.evaluate(async (uname) => {
+                        if (window.Store) {
+                            if (window.Store.Contact && window.Store.Contact.models) {
+                                const c = window.Store.Contact.models.find(m => 
+                                    (m.username && m.username.toLowerCase() === uname) ||
+                                    (m.attributes && m.attributes.username && m.attributes.username.toLowerCase() === uname) ||
+                                    (m.verifiedName && m.verifiedName.toLowerCase() === uname)
+                                );
+                                if (c && c.id) return c.id._serialized;
+                            }
+                            if (window.Store.QueryUsername) {
+                                const res = await window.Store.QueryUsername(uname);
+                                if (res && res.wid) return res.wid._serialized;
+                            }
+                            if (window.Store.WapQuery && window.Store.WapQuery.queryUsername) {
+                                const res = await window.Store.WapQuery.queryUsername(uname);
+                                if (res && res.wid) return res.wid._serialized;
+                            }
+                        }
+                        return null;
+                    }, cleanUser).catch(() => null);
+                    if (resolvedWid) return resolvedWid;
+                } catch (_) {}
+            }
+
+            // 3. Fallback: try getNumberId or username JID
+            try {
+                if (typeof this.client.getNumberId === 'function') {
+                    const id = await this.client.getNumberId(cleanUser);
+                    if (id && id._serialized) return id._serialized;
+                }
+            } catch (_) {}
+
+            return `${cleanUser}@c.us`;
+        }
+
+        // Standard Phone number resolution
+        const cleanPhone = phoneUtils.normalizePhoneNumber(raw);
+        let targetJid = `${cleanPhone}@c.us`;
         try {
             if (this.client && typeof this.client.getNumberId === 'function') {
-                const numberId = await this.client.getNumberId(clean);
+                const numberId = await this.client.getNumberId(cleanPhone);
                 if (numberId && numberId._serialized) {
                     targetJid = numberId._serialized;
                 }
@@ -390,12 +453,80 @@ class WhatsAppGateway {
         return { success: true, message: 'Message deleted' };
     }
 
-    async checkNumberRegistered(phone) {
+    async checkNumberRegistered(phoneOrUsername) {
         if (!this.isReady) {
             return { success: false, exists: false, message: 'WhatsApp client is not ready.' };
         }
 
-        const clean = phoneUtils.normalizePhoneNumber(phone);
+        const raw = String(phoneOrUsername || '').trim();
+
+        // 1. WhatsApp Username Verification
+        if (phoneUtils.isUsername(raw)) {
+            const cleanUser = phoneUtils.normalizeUsername(raw);
+            try {
+                let isFound = false;
+                let finalJid = null;
+
+                // Search contacts
+                const contacts = await this.client.getContacts().catch(() => []);
+                const found = contacts.find(c => 
+                    (c.username && c.username.toLowerCase() === cleanUser) ||
+                    (c.id && c.id.user && c.id.user.toLowerCase() === cleanUser)
+                );
+                if (found) {
+                    isFound = true;
+                    finalJid = found.id?._serialized || `${cleanUser}@c.us`;
+                }
+
+                // Query in page context
+                if (!isFound && this.client && this.client.pupPage) {
+                    const resolved = await this.client.pupPage.evaluate(async (uname) => {
+                        if (window.Store) {
+                            if (window.Store.Contact && window.Store.Contact.models) {
+                                const c = window.Store.Contact.models.find(m => 
+                                    (m.username && m.username.toLowerCase() === uname) ||
+                                    (m.attributes && m.attributes.username && m.attributes.username.toLowerCase() === uname)
+                                );
+                                if (c && c.id) return c.id._serialized;
+                            }
+                            if (window.Store.QueryUsername) {
+                                const res = await window.Store.QueryUsername(uname);
+                                if (res && res.wid) return res.wid._serialized;
+                            }
+                        }
+                        return null;
+                    }, cleanUser).catch(() => null);
+
+                    if (resolved) {
+                        isFound = true;
+                        finalJid = resolved;
+                    }
+                }
+
+                return {
+                    success: true,
+                    type: 'username',
+                    identifier: '@' + cleanUser,
+                    username: cleanUser,
+                    exists: isFound,
+                    jid: finalJid || `${cleanUser}@c.us`,
+                    message: isFound 
+                        ? `Username @${cleanUser} is verified and registered on WhatsApp.` 
+                        : `Username @${cleanUser} was not found on WhatsApp.`
+                };
+            } catch (err) {
+                return {
+                    success: false,
+                    type: 'username',
+                    username: cleanUser,
+                    exists: false,
+                    message: 'Failed to verify WhatsApp username: ' + err.message
+                };
+            }
+        }
+
+        // 2. Phone Number Verification
+        const clean = phoneUtils.normalizePhoneNumber(raw);
         const jid = `${clean}@c.us`;
 
         try {
@@ -426,6 +557,8 @@ class WhatsAppGateway {
 
             return {
                 success: true,
+                type: 'phone',
+                identifier: '+' + clean,
                 phone: clean,
                 exists: Boolean(isRegistered),
                 jid: finalJid,
@@ -436,6 +569,7 @@ class WhatsAppGateway {
         } catch (err) {
             return {
                 success: false,
+                type: 'phone',
                 phone: clean,
                 exists: false,
                 message: 'Failed to verify WhatsApp number: ' + err.message

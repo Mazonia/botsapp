@@ -32,6 +32,7 @@
     "/api/send": {
       "post": {
         "summary": "Send Text Message",
+        "description": "Send a standard text message. Accepts a phone number (E.164) or WhatsApp @username handle.",
         "requestBody": {
           "required": true,
           "content": {
@@ -40,7 +41,8 @@
                 "type": "object",
                 "required": ["phone", "message"],
                 "properties": {
-                  "phone": { "type": "string", "example": "233241234567" },
+                  "phone": { "type": "string", "description": "Recipient phone number or @username handle", "example": "233241234567" },
+                  "username": { "type": "string", "description": "Alternative WhatsApp @username handle", "example": "@johndoe" },
                   "message": { "type": "string", "example": "Hello from BotsApp!" },
                   "priority": { "type": "string", "enum": ["normal", "high"], "default": "normal" }
                 }
@@ -108,16 +110,17 @@
     },
     "/api/check-number": {
       "post": {
-        "summary": "Check if Phone Number is Registered on WhatsApp",
+        "summary": "Check if Phone Number or @Username is Registered on WhatsApp",
+        "description": "Verifies whether a phone number or WhatsApp username handle is registered. Alias: /api/check-user",
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["phone"],
                 "properties": {
-                  "phone": { "type": "string", "example": "0241234567" }
+                  "phone": { "type": "string", "example": "0241234567", "description": "Phone number or @username handle" },
+                  "username": { "type": "string", "example": "@johndoe", "description": "WhatsApp username handle" }
                 }
               }
             }
