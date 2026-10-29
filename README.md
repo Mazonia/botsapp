@@ -17,6 +17,7 @@ BotsApp solves the challenge of connecting applications, web platforms, and CRMs
 - **Outsource-Friendly:** Built with clean directory boundaries, OpenAPI/Swagger specifications, Postman collections, and comprehensive documentation so external contractors, freelancers, or development teams can build on top of it without accessing your main codebase.
 - **Enterprise Automation:** Includes built-in bulk campaign broadcasting, CSV list importing, number verification, keyword auto-responder bots, and real-time live inbox messaging out of the box.
 - **Self-Hosted Privacy:** 100% self-hosted. Your customer data, phone numbers, and chat logs never pass through third-party servers.
+- **Modern Identifier Support:** Built-in compatibility for both traditional international phone numbers and WhatsApp @username handles.
 
 ---
 
